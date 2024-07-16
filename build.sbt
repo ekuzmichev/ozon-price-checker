@@ -5,5 +5,8 @@ ThisBuild / scalaVersion := "3.3.3"
 lazy val root = (project in file("."))
   .settings(
     name := "ozon-price-checker",
-    idePackagePrefix := Some("ru.ekuzmichev")
+    idePackagePrefix := Some("ru.ekuzmichev"),
+    libraryDependencies ++= Seq(
+      "net.ruippeixotog" %% "scala-scraper" % "3.1.1"
+    )
   )
