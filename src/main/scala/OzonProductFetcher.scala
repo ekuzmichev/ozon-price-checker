@@ -28,6 +28,7 @@ class OzonProductFetcher {
       .trim()
       .replace(" ", "")
       .replace("₽", "")
+      .replaceAll("[a-zA-Zа-яА-ЯЁё]", "")
       .toDouble
   }
 
