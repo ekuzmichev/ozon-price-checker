@@ -86,7 +86,8 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
       token: String
   ): Task[BotSession] =
     for {
-      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot())
+      runtime             <- ZIO.runtime[Any]
+      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(runtime))
       botSession <- ZIO.attempt(
         botsApplication.registerBot(token, ozonPriceCheckerBot)
       )
