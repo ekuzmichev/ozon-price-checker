@@ -3,6 +3,7 @@ package app
 
 import bot.OzonPriceCheckerBot
 import config.{AppConfig, AppConfigProvider}
+import lang.Throwables.makeErrorCauseMessage
 
 import org.telegram.telegrambots.longpolling.{BotSession, TelegramBotsLongPollingApplication}
 import zio.logging.backend.SLF4J
@@ -14,10 +15,11 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] =
-    for {
+    (for {
       appConfig <- parseAppConfig()
       _         <- runBots(appConfig)
-    } yield ()
+    } yield ())
+      .catchAll(t => ZIO.fail(s"Got error while running App: $makeErrorCauseMessage(t)"))
 
   private def runBots(appConfig: AppConfig) =
     ZIO.scoped {
@@ -56,7 +58,10 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
     ZIO.acquireRelease {
       ZIO
         .attempt(new TelegramBotsLongPollingApplication)
-        .tap(botsApplication => ZIO.log(s"Bots application is running: ${botsApplication.isRunning}"))
+        .tapBoth(
+          t => ZIO.logError(s"Failed to start TelegramBotsLongPollingApplication: ${makeErrorCauseMessage(t)}"),
+          botsApplication => ZIO.log(s"Bots application is running: ${botsApplication.isRunning}")
+        )
     } { botsApplication =>
       close(botsApplication) *> stop(botsApplication)
     }
@@ -88,11 +93,18 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
     for {
       runtime             <- ZIO.runtime[Any]
       ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(runtime))
-      botSession <- ZIO.attempt(
-        botsApplication.registerBot(token, ozonPriceCheckerBot)
-      )
-      _ <- ZIO.log(
-        s"Registered bot '${ozonPriceCheckerBot.getClass.getSimpleName}'. Session is running: ${botSession.isRunning}"
-      )
+      botSession <- ZIO
+        .attempt(
+          botsApplication.registerBot(token, ozonPriceCheckerBot)
+        )
+        .tapBoth(
+          t =>
+            ZIO
+              .logError(s"Failed to register OzonPriceCheckerBot: ${makeErrorCauseMessage(t, printStackTrace = true)}"),
+          botSession =>
+            ZIO.log(
+              s"Registered bot '${ozonPriceCheckerBot.getClass.getSimpleName}'. Session is running: ${botSession.isRunning}"
+            )
+        )
     } yield botSession
 }
