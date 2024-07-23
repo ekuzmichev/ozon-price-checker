@@ -5,6 +5,7 @@ import bot.OzonPriceCheckerBot
 import config.{AppConfig, AppConfigProvider}
 import lang.Throwables.makeErrorCauseMessage
 
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient
 import org.telegram.telegrambots.longpolling.{BotSession, TelegramBotsLongPollingApplication}
 import zio.logging.backend.SLF4J
 import zio.{RIO, Schedule, Scope, Task, UIO, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
@@ -92,7 +93,8 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
   ): Task[BotSession] =
     for {
       runtime             <- ZIO.runtime[Any]
-      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(runtime))
+      telegramClient      <- ZIO.attempt(new OkHttpTelegramClient(token))
+      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(telegramClient, runtime))
       botSession <- ZIO
         .attempt(
           botsApplication.registerBot(token, ozonPriceCheckerBot)

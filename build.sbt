@@ -10,6 +10,7 @@ lazy val root = (project in file("."))
     idePackagePrefix := Some("ru.ekuzmichev"),
     libraryDependencies ++= Seq(
       "net.ruippeixotog" %% "scala-scraper"            % "3.1.1",
+      "org.telegram"      % "telegrambots-client"      % "7.7.1",
       "org.telegram"      % "telegrambots-longpolling" % "7.7.1",
       "ch.qos.logback"    % "logback-classic"          % "1.5.6",
       "dev.zio"          %% "zio"                      % "2.1.6",
