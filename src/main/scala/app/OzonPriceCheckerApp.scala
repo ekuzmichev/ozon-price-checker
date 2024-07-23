@@ -1,14 +1,14 @@
 package ru.ekuzmichev
 package app
 
-import bot.OzonPriceCheckerBot
+import bot.{OzonPriceCheckerBot, ProductWatchStore}
 import config.{AppConfig, AppConfigProvider}
 import lang.Throwables.makeErrorCauseMessage
 
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient
 import org.telegram.telegrambots.longpolling.{BotSession, TelegramBotsLongPollingApplication}
 import zio.logging.backend.SLF4J
-import zio.{RIO, Schedule, Scope, Task, UIO, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+import zio.{RIO, Ref, Schedule, Scope, Task, UIO, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
 
 import java.time.{LocalDateTime, ZoneId}
 
@@ -25,7 +25,7 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
   private def runBots(appConfig: AppConfig) =
     ZIO.scoped {
       for {
-        startDateTime   <- getCurrentDateTime()
+        startDateTime   <- getCurrentDateTime
         botsApplication <- createBotsApplication()
         _               <- registerOzonPriceCheckerBot(botsApplication, appConfig.ozonPriceCheckerBotToken)
         _               <- scheduleRunningStatusLog(startDateTime)
@@ -33,7 +33,7 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
     }
 
   private def scheduleRunningStatusLog(startDateTime: LocalDateTime) =
-    getCurrentDateTime()
+    getCurrentDateTime
       .flatMap(currentDateTime =>
         ZIO.log(
           s"Bots are running already " +
@@ -45,7 +45,7 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
   private def toEpochSeconds(localDateTime: LocalDateTime): Long =
     localDateTime.atZone(ZoneId.systemDefault()).toEpochSecond
 
-  private def getCurrentDateTime(): UIO[LocalDateTime] = ZIO.clock.flatMap(_.localDateTime)
+  private def getCurrentDateTime: UIO[LocalDateTime] = ZIO.clock.flatMap(_.localDateTime)
 
   private def printDuration(seconds: Long) =
     f"${seconds / 3600}:${(seconds % 3600) / 60}%02d:${seconds % 60}%02d"
@@ -92,9 +92,10 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
       token: String
   ): Task[BotSession] =
     for {
-      runtime             <- ZIO.runtime[Any]
-      telegramClient      <- ZIO.attempt(new OkHttpTelegramClient(token))
-      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(telegramClient, runtime))
+      runtime              <- ZIO.runtime[Any]
+      telegramClient       <- ZIO.attempt(new OkHttpTelegramClient(token))
+      productWatchStoreRef <- Ref.make(ProductWatchStore.empty)
+      ozonPriceCheckerBot  <- ZIO.attempt(new OzonPriceCheckerBot(telegramClient, productWatchStoreRef, runtime))
       botSession <- ZIO
         .attempt(
           botsApplication.registerBot(token, ozonPriceCheckerBot)
