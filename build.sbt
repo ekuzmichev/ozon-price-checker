@@ -9,14 +9,16 @@ lazy val root = (project in file("."))
     name             := "ozon-price-checker",
     idePackagePrefix := Some("ru.ekuzmichev"),
     libraryDependencies ++= Seq(
-      "net.ruippeixotog" %% "scala-scraper"            % "3.1.1",
-      "org.telegram"      % "telegrambots-client"      % "7.7.1",
-      "org.telegram"      % "telegrambots-longpolling" % "7.7.1",
-      "ch.qos.logback"    % "logback-classic"          % "1.5.6",
-      "dev.zio"          %% "zio"                      % "2.1.6",
-      "dev.zio"          %% "zio-config"               % zioVersion,
-      "dev.zio"          %% "zio-config-magnolia"      % zioVersion,
-      "dev.zio"          %% "zio-config-typesafe"      % zioVersion,
-      "dev.zio"          %% "zio-logging-slf4j2"       % "2.3.0"
+      "net.ruippeixotog"              %% "scala-scraper"            % "3.1.1",
+      "org.telegram"                   % "telegrambots-client"      % "7.7.1",
+      "org.telegram"                   % "telegrambots-longpolling" % "7.7.1",
+      "ch.qos.logback"                 % "logback-classic"          % "1.5.6",
+      "dev.zio"                       %% "zio"                      % "2.1.6",
+      "dev.zio"                       %% "zio-config"               % zioVersion,
+      "dev.zio"                       %% "zio-config-magnolia"      % zioVersion,
+      "dev.zio"                       %% "zio-config-typesafe"      % zioVersion,
+      "dev.zio"                       %% "zio-logging-slf4j2"       % "2.3.0",
+      "com.github.alonsodomin.cron4s" %% "cron4s-core"              % "0.7.0",
+      "org.typelevel"                 %% "cats-core"                % "2.12.0"
     )
   )

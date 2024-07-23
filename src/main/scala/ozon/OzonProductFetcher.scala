@@ -1,6 +1,7 @@
 package ru.ekuzmichev
+package ozon
 
-import OzonProductFetcher.{OzonBaseUrl, ProductNameAsStringExtractor, RawPriceAsStringExtractor}
+import ozon.OzonProductFetcher.{OzonBaseUrl, ProductNameAsStringExtractor, RawPriceAsStringExtractor}
 
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 import net.ruippeixotog.scalascraper.dsl.DSL.*
