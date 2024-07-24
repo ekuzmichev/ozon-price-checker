@@ -3,6 +3,8 @@ package bot
 
 import common.{ChatId, UserName}
 import ozon.OzonProductFetcher
+import schedule.Cron4sNextRimeProvider.fromCronString
+import schedule.{Cron4sNextRimeProvider, ZioScheduler}
 import store.*
 import store.ProductStore.ProductCandidate.*
 import store.ProductStore.{Product, ProductCandidate, SourceId}
@@ -18,6 +20,7 @@ class OzonPriceCheckerBot(
     telegramClient: TelegramClient,
     productStore: ProductStore,
     ozonProductFetcher: OzonProductFetcher,
+    zioScheduler: ZioScheduler,
     runtime: Runtime[Any]
 ) extends ZioLongPollingSingleThreadUpdateConsumer(runtime) {
 
@@ -83,7 +86,35 @@ class OzonPriceCheckerBot(
                       s"To watch new product send me ${Commands.WatchNewProduct}"
                   ) *>
                     productStore.resetProductCandidate(sourceId) *>
-                    productStore.addProduct(sourceId, Product(productId, priceThreshold))
+                    productStore.addProduct(sourceId, Product(productId, priceThreshold)) *>
+                    productStore
+                      .readSourceState(sourceId)
+                      .map(_.exists(_.products.size == 1))
+                      .tap {
+                        ZIO.when(_)(
+                          ZIO
+                            .fromTry(fromCronString("0 */1 * * * ?"))
+                            .logged("create cron4s time provider")
+                            .flatMap {
+                              zioScheduler
+                                .schedule(
+                                  productStore
+                                    .readSourceState(sourceId)
+                                    .map(_.fold(Seq.empty[ProductStore.Product])(_.products))
+                                    .flatMap { products =>
+                                      sendTextMessage(
+                                        sourceId.chatId,
+                                        s"Here are your watched products:\n${products.mkString("\n")}"
+                                      )
+                                    },
+                                  _,
+                                  s"${sourceId.userName}|${sourceId.chatId}"
+                                )
+                                .forkDaemon
+                            }
+                            .ignore
+                        )
+                      }
             // TODO: Check if priceThreshold is already reached and do not watch the product
             case None =>
               sendDefaultMsg()

@@ -69,7 +69,7 @@ class ZioSchedulerImpl(jobIdGenerator: JobIdGenerator) extends ZioScheduler:
         effect
           .tapBoth(
             error => getNow.flatMap(now => ZIO.logError(s"Job failed at $now with error: $error")),
-            res => getNow.flatMap(now => ZIO.logDebug(s"Job finished ar $now with result: $res"))
+            res => getNow.flatMap(now => ZIO.logDebug(s"Job finished at $now with result: $res"))
           )
           .ignore
     if (sleepDuration.isZero) io else io.delay(sleepDuration)

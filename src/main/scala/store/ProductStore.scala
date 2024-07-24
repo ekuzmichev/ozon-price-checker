@@ -4,7 +4,7 @@ package store
 import common.{ChatId, ProductId, UserName}
 import store.ProductStore.{ProductCandidate, SourceId, SourceState}
 
-import zio.Task
+import zio.{Fiber, FiberRef, Task}
 
 trait ProductStore:
   def checkInitialized(sourceId: SourceId): Task[Boolean]
@@ -26,7 +26,11 @@ object ProductStore:
     case object WaitingProductId                           extends ProductCandidate
     case class WaitingPriceThreshold(productId: ProductId) extends ProductCandidate
 
-  case class SourceState(products: Seq[Product], maybeProductCandidate: Option[ProductCandidate])
+  case class SourceState(
+      products: Seq[Product],
+      maybeProductCandidate: Option[ProductCandidate],
+      maybeScheduleFiberRuntime: Option[Fiber.Runtime[Any, Unit]]
+  )
 
   object SourceState:
-    def empty: SourceState = SourceState(Seq.empty, None)
+    def empty: SourceState = SourceState(Seq.empty, None, None)

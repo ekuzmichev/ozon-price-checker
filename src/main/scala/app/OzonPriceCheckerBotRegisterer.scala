@@ -4,6 +4,7 @@ package app
 import bot.OzonPriceCheckerBot
 import lang.Throwables.makeCauseSeqMessage
 import ozon.OzonProductFetcher
+import schedule.{AlphaNumericJobIdGenerator, ZioSchedulerImpl}
 import store.InMemoryProductStore
 import store.InMemoryProductStore.ProductState
 
@@ -22,8 +23,9 @@ object OzonPriceCheckerBotRegisterer:
       productStateRef <- Ref.make(ProductState.empty)
       productStore       = new InMemoryProductStore(productStateRef)
       ozonProductFetcher = new OzonProductFetcher()
+      zioScheduler       = new ZioSchedulerImpl(new AlphaNumericJobIdGenerator)
       ozonPriceCheckerBot <- ZIO.attempt(
-        new OzonPriceCheckerBot(telegramClient, productStore, ozonProductFetcher, runtime)
+        new OzonPriceCheckerBot(telegramClient, productStore, ozonProductFetcher, zioScheduler, runtime)
       )
       botSession <- ZIO
         .attempt(
