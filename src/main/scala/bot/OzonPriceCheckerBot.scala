@@ -1,20 +1,23 @@
 package ru.ekuzmichev
 package bot
 
-import common.{ChatId, ProductId, UserName}
+import common.{ChatId, UserName}
+import ozon.OzonProductFetcher
 import store.*
-import store.ProductStore.SourceId
+import store.ProductStore.ProductCandidate.*
+import store.ProductStore.{Product, ProductCandidate, SourceId}
 import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.message.Message
 import org.telegram.telegrambots.meta.generics.TelegramClient
-import zio.{LogAnnotation, Ref, Runtime, Task, ZIO}
+import zio.{LogAnnotation, Runtime, Task, ZIO}
 
 class OzonPriceCheckerBot(
     telegramClient: TelegramClient,
     productStore: ProductStore,
+    ozonProductFetcher: OzonProductFetcher,
     runtime: Runtime[Any]
 ) extends ZioLongPollingSingleThreadUpdateConsumer(runtime) {
 
@@ -45,8 +48,48 @@ class OzonPriceCheckerBot(
   }
 
   private def processText(sourceId: SourceId, text: ChatId): Task[Unit] =
-    ZIO.log(s"Got text $text") *>
-      sendTextMessage(sourceId.chatId, "I am able to process only commands. Send me one known to me.")
+    def sendDefaultMsg() = sendTextMessage(sourceId.chatId, "Send me a command known to me.")
+    for {
+      _                <- ZIO.log(s"Got text $text")
+      maybeSourceState <- productStore.readSourceState(sourceId)
+      _ <- maybeSourceState match
+        case Some(sourceState) =>
+          sourceState.maybeProductCandidate match
+            case Some(productCandidate) =>
+              productCandidate match
+                case WaitingProductId =>
+                  val productId = text // TODO: parse productId from URL, or plain text
+                  ZIO
+                    .attempt(ozonProductFetcher.fetchProductInfo(text))
+                    .tap(productInfo =>
+                      sendTextMessage(
+                        sourceId.chatId,
+                        s"I have fetched product info from OZON for you:\n\n" +
+                          s"ID: $productId\n" +
+                          s"Name: ${productInfo.name}\n\n" +
+                          s"Current Price: ${productInfo.price} ₽\n\n" +
+                          s"Send me price threshold."
+                      ) *>
+                        productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId))
+                    )
+                case WaitingPriceThreshold(productId) =>
+                  val priceThreshold = text.toInt // TODO: parse priceThreshold more safe
+                  sendTextMessage(
+                    sourceId.chatId,
+                    s"I have got price threshold from you:\n\n" +
+                      s"ID: $productId\n\n" +
+                      s"Price Threshold: $priceThreshold ₽\n\n" +
+                      s"Added product to watches.\n\n" +
+                      s"To watch new product send me ${Commands.WatchNewProduct}"
+                  ) *>
+                    productStore.resetProductCandidate(sourceId) *>
+                    productStore.addProduct(sourceId, Product(productId, priceThreshold))
+            // TODO: Check if priceThreshold is already reached and do not watch the product
+            case None =>
+              sendDefaultMsg()
+        case None =>
+          sendDefaultMsg()
+    } yield ()
 
   private def processCommand(sourceId: SourceId, text: ChatId): Task[Unit] =
     if (text == Commands.Start) {
@@ -101,7 +144,8 @@ class OzonPriceCheckerBot(
       initialized <- productStore.checkInitialized(sourceId)
       _ <-
         if (initialized) {
-          sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.")
+          sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.") *>
+            productStore.updateProductCandidate(sourceId, WaitingProductId)
         } else {
           sendTextMessage(
             sourceId.chatId,

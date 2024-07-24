@@ -3,6 +3,7 @@ package app
 
 import bot.OzonPriceCheckerBot
 import lang.Throwables.makeCauseSeqMessage
+import ozon.OzonProductFetcher
 import store.InMemoryProductStore
 import store.InMemoryProductStore.ProductState
 
@@ -19,8 +20,11 @@ object OzonPriceCheckerBotRegisterer:
       runtime         <- ZIO.runtime[Any]
       telegramClient  <- ZIO.attempt(new OkHttpTelegramClient(token))
       productStateRef <- Ref.make(ProductState.empty)
-      productStore = new InMemoryProductStore(productStateRef)
-      ozonPriceCheckerBot <- ZIO.attempt(new OzonPriceCheckerBot(telegramClient, productStore, runtime))
+      productStore       = new InMemoryProductStore(productStateRef)
+      ozonProductFetcher = new OzonProductFetcher()
+      ozonPriceCheckerBot <- ZIO.attempt(
+        new OzonPriceCheckerBot(telegramClient, productStore, ozonProductFetcher, runtime)
+      )
       botSession <- ZIO
         .attempt(
           botsApplication.registerBot(token, ozonPriceCheckerBot)
