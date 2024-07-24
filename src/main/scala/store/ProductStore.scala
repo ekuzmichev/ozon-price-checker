@@ -3,6 +3,7 @@ package store
 
 import common.{ChatId, ProductId, UserName}
 import store.ProductStore.{ProductCandidate, SourceId, SourceState}
+import util.lang.NamedToString
 
 import zio.{Fiber, Task}
 
@@ -16,21 +17,21 @@ trait ProductStore:
   def addProduct(sourceId: SourceId, product: ProductStore.Product): Task[Boolean]
 
 object ProductStore:
-  case class SourceId(userName: UserName, chatId: ChatId)
+  case class SourceId(userName: UserName, chatId: ChatId) extends NamedToString
 
-  case class Product(id: ProductId, priceThreshold: Int)
+  case class Product(id: ProductId, priceThreshold: Int) extends NamedToString
 
   sealed trait ProductCandidate
 
   object ProductCandidate:
     case object WaitingProductId                           extends ProductCandidate
-    case class WaitingPriceThreshold(productId: ProductId) extends ProductCandidate
+    case class WaitingPriceThreshold(productId: ProductId) extends ProductCandidate with NamedToString
 
   case class SourceState(
       products: Seq[Product],
       maybeProductCandidate: Option[ProductCandidate],
       maybeScheduleFiberRuntime: Option[Fiber.Runtime[Any, Unit]]
-  )
+  ) extends NamedToString
 
   object SourceState:
     def empty: SourceState = SourceState(Seq.empty, None, None)
