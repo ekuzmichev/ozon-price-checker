@@ -53,7 +53,7 @@ class OzonPriceCheckerUpdateConsumer(
   private def processText(sourceId: SourceId, text: ChatId): Task[Unit] =
     def sendDefaultMsg() = sendTextMessage(sourceId.chatId, "Send me a command known to me.")
     for {
-      _                <- ZIO.log(s"Got text $text")
+      _                <- ZIO.log(s"Got text '$text''")
       maybeSourceState <- productStore.readSourceState(sourceId)
       _ <- maybeSourceState match
         case Some(sourceState) =>
@@ -94,7 +94,7 @@ class OzonPriceCheckerUpdateConsumer(
                         ZIO.when(_)(
                           ZIO
                             .fromTry(fromCronString("0 */1 * * * ?"))
-                            .logged("create cron4s time provider")
+                            .logged("create cron4s time provider", printResult = _.info)
                             .flatMap {
                               zioScheduler
                                 .schedule(
@@ -151,10 +151,10 @@ class OzonPriceCheckerUpdateConsumer(
     for {
       initialized <- productStore.checkInitialized(sourceId)
 
-      _ <- ZIO.log(s"Source ID $sourceId is ${if (initialized) "already" else "not"} initialized in store")
+      _ <- ZIO.log(s"Source ID is ${if (initialized) "already" else "not"} initialized in store")
 
       _ <- ZIO.when(!initialized) {
-        productStore.emptyState(sourceId).logged(s"initialize source ID $sourceId store entry")
+        productStore.emptyState(sourceId).logged(s"initialize store entry")
       }
     } yield !initialized
 
