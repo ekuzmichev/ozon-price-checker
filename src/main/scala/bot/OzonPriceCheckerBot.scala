@@ -1,7 +1,7 @@
 package ru.ekuzmichev
 package bot
 
-import common.TypeAliases.{ChatId, ProductId, UserName}
+import common.{ChatId, ProductId, UserName}
 import store.*
 import store.ProductStore.SourceId
 import util.zio.ZioLoggingImplicits.Ops

@@ -1,7 +1,7 @@
 package ru.ekuzmichev
 package store
 
-import common.TypeAliases.ProductId
+import common.ProductId
 import store.InMemoryProductStore.ProductState
 import store.ProductStore.{SourceId, WatchParams}
 

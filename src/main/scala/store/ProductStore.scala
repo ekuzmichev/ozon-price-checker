@@ -1,7 +1,7 @@
 package ru.ekuzmichev
 package store
 
-import common.TypeAliases.{ChatId, UserName}
+import common.{ChatId, UserName}
 import store.ProductStore.SourceId
 
 import zio.Task
