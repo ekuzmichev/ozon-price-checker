@@ -2,7 +2,7 @@ package ru.ekuzmichev
 package util.zio
 
 import lang.Throwables
-import lang.Throwables.makeErrorCauseMessage
+import lang.Throwables.makeCauseSeqMessage
 
 import zio.ZIO
 
@@ -12,7 +12,7 @@ object ZioLoggingImplicits:
         effectDescription: String,
         printResult: A => String = _.toString,
         printError: E => String = {
-          case t: Throwable => makeErrorCauseMessage(t, printStackTrace = true)
+          case t: Throwable => makeCauseSeqMessage(t, printStackTrace = true)
           case error        => error.toString
         }
     ): ZIO[R, E, A] =

@@ -2,6 +2,8 @@ package ru.ekuzmichev
 package bot
 
 import common.TypeAliases.{ChatId, ProductId, UserName}
+import store.*
+import store.ProductStore.SourceId
 import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -12,7 +14,7 @@ import zio.{LogAnnotation, Ref, Runtime, Task, ZIO}
 
 class OzonPriceCheckerBot(
     telegramClient: TelegramClient,
-    productWatchStoreRef: Ref[ProductWatchStore],
+    productStore: ProductStore,
     runtime: Runtime[Any]
 ) extends ZioLongPollingSingleThreadUpdateConsumer(runtime) {
 
@@ -62,37 +64,41 @@ class OzonPriceCheckerBot(
 
   private def processStartCommand(sourceId: SourceId): Task[Unit] =
     initializeStoreEntry(sourceId)
-      .flatMap(initialized =>
-        sendTextMessage(
-          sourceId.chatId,
+      .flatMap(initialized => {
+        val msg =
           if (initialized)
             "I have added you to the Store."
           else
             "You have been already added to the Store before."
-        )
-      )
+        sendTextMessage(sourceId.chatId, msg)
+      })
       .logged(s"process command ${Commands.Start} ")
 
   private def initializeStoreEntry(sourceId: SourceId): Task[Boolean] =
     for {
-      initialized <- checkInitialized(sourceId)
+      initialized <- productStore.checkInitialized(sourceId)
 
       _ <- ZIO.log(s"Source ID $sourceId is ${if (initialized) "already" else "not"} initialized in store")
 
       _ <- ZIO.when(!initialized) {
-        setToInitialState(sourceId).logged(s"initialize source ID $sourceId store entry")
+        productStore.emptyState(sourceId).logged(s"initialize source ID $sourceId store entry")
       }
     } yield !initialized
 
   private def processStopCommand(sourceId: SourceId): Task[Unit] =
-    productWatchStoreRef
-      .update(_ - sourceId)
-      .zipRight(sendTextMessage(sourceId.chatId, "I have deleted you from the Store."))
+    (for {
+      initialized <- productStore.checkInitialized(sourceId)
+      _           <- ZIO.when(initialized)(productStore.clearState(sourceId))
+      msg =
+        if (initialized) "I have deleted you from the Store."
+        else "You have been already removed from the Store before."
+      _ <- sendTextMessage(sourceId.chatId, msg)
+    } yield ())
       .logged(s"process command ${Commands.Stop} ")
 
   private def processWatchNewProductCommand(sourceId: SourceId): Task[Unit] =
     (for {
-      initialized <- checkInitialized(sourceId)
+      initialized <- productStore.checkInitialized(sourceId)
       _ <-
         if (initialized) {
           sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.")
@@ -111,14 +117,10 @@ class OzonPriceCheckerBot(
       telegramClient.execute(sendMessage)
     }.unit
 
-  private def checkInitialized(sourceId: SourceId): Task[Boolean] =
-    productWatchStoreRef.get.map(_.contains(sourceId))
-
   private def processUnwatchAllProductsCommand(sourceId: SourceId): Task[Unit] =
-    setToInitialState(sourceId)
+    productStore
+      .emptyState(sourceId)
       .zipRight(sendTextMessage(sourceId.chatId, "I have removed all watched products."))
       .logged(s"process command ${Commands.UnwatchAllProducts}")
 
-  private def setToInitialState(sourceId: SourceId) =
-    productWatchStoreRef.update(_ + (sourceId -> Map.empty[ProductId, WatchParams]))
 }

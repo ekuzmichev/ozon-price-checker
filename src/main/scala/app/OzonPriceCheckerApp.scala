@@ -1,26 +1,34 @@
 package ru.ekuzmichev
 package app
 
-import bot.{OzonPriceCheckerBot, ProductWatchStore}
+import app.BotsApplicationCreator.createBotsApplication
+import app.OzonPriceCheckerBotRegisterer.registerOzonPriceCheckerBot
 import config.{AppConfig, AppConfigProvider}
-import lang.Throwables.makeErrorCauseMessage
+import lang.Durations.printDuration
+import lang.JavaTime.toEpochSeconds
+import lang.Throwables.makeCauseSeqMessage
+import util.zio.ZioClock.getCurrentDateTime
 
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient
-import org.telegram.telegrambots.longpolling.{BotSession, TelegramBotsLongPollingApplication}
+import org.telegram.telegrambots.longpolling.BotSession
 import zio.logging.backend.SLF4J
-import zio.{RIO, Ref, Schedule, Scope, Task, UIO, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+import zio.{Schedule, Scope, Task, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
 
-import java.time.{LocalDateTime, ZoneId}
+import java.time.LocalDateTime
 
 object OzonPriceCheckerApp extends ZIOAppDefault {
   override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] = zio.Runtime.removeDefaultLoggers >>> SLF4J.slf4j
 
   override def run: ZIO[Any with ZIOAppArgs with Scope, Any, Any] =
     (for {
-      appConfig <- parseAppConfig()
+      appConfig <- provideAppConfig()
       _         <- runBots(appConfig)
     } yield ())
-      .catchAll(t => ZIO.fail(s"Got error while running App: $makeErrorCauseMessage(t)"))
+      .catchAll(t => ZIO.fail(s"Got error while running ${this.getClass.getSimpleName}: $makeCauseSeqMessage(t)"))
+
+  private def provideAppConfig(): Task[AppConfig] =
+    AppConfigProvider
+      .provideAppConfig()
+      .tap(appConfig => ZIO.log(s"Got app configuration: $appConfig"))
 
   private def runBots(appConfig: AppConfig) =
     ZIO.scoped {
@@ -42,72 +50,4 @@ object OzonPriceCheckerApp extends ZIOAppDefault {
       )
       .schedule(Schedule.fixed(10.hours))
 
-  private def toEpochSeconds(localDateTime: LocalDateTime): Long =
-    localDateTime.atZone(ZoneId.systemDefault()).toEpochSecond
-
-  private def getCurrentDateTime: UIO[LocalDateTime] = ZIO.clock.flatMap(_.localDateTime)
-
-  private def printDuration(seconds: Long) =
-    f"${seconds / 3600}:${(seconds % 3600) / 60}%02d:${seconds % 60}%02d"
-
-  private def parseAppConfig(): Task[AppConfig] =
-    AppConfigProvider
-      .provideAppConfig()
-      .tap(appConfig => ZIO.log(s"Parsed app configuration: $appConfig"))
-
-  private def createBotsApplication(): RIO[Scope, TelegramBotsLongPollingApplication] =
-    ZIO.acquireRelease {
-      ZIO
-        .attempt(new TelegramBotsLongPollingApplication)
-        .tapBoth(
-          t => ZIO.logError(s"Failed to start TelegramBotsLongPollingApplication: ${makeErrorCauseMessage(t)}"),
-          botsApplication => ZIO.log(s"Bots application is running: ${botsApplication.isRunning}")
-        )
-    } { botsApplication =>
-      close(botsApplication) *> stop(botsApplication)
-    }
-
-  private def close(botsApplication: TelegramBotsLongPollingApplication): UIO[Unit] =
-    ZIO
-      .log(s"Closing bots application")
-      .zipRight(ZIO.when(botsApplication.isRunning)(ZIO.attempt(botsApplication.close())))
-      .tapBoth(
-        error => ZIO.log(s"Closing bots application...FAILED. Cause: $error"),
-        _ => ZIO.log(s"Closing bots application...DONE. App is running: ${botsApplication.isRunning}")
-      )
-      .ignore
-
-  private def stop(botsApplication: TelegramBotsLongPollingApplication): UIO[Unit] =
-    ZIO
-      .log(s"Stopping bots application")
-      .zipRight(ZIO.when(botsApplication.isRunning)(ZIO.attempt(botsApplication.stop())))
-      .tapBoth(
-        error => ZIO.log(s"Stopping bots application...FAILED. Cause: $error"),
-        _ => ZIO.log(s"Stopping bots application...DONE. App is running: ${botsApplication.isRunning}")
-      )
-      .ignore
-
-  private def registerOzonPriceCheckerBot(
-      botsApplication: TelegramBotsLongPollingApplication,
-      token: String
-  ): Task[BotSession] =
-    for {
-      runtime              <- ZIO.runtime[Any]
-      telegramClient       <- ZIO.attempt(new OkHttpTelegramClient(token))
-      productWatchStoreRef <- Ref.make(ProductWatchStore.empty)
-      ozonPriceCheckerBot  <- ZIO.attempt(new OzonPriceCheckerBot(telegramClient, productWatchStoreRef, runtime))
-      botSession <- ZIO
-        .attempt(
-          botsApplication.registerBot(token, ozonPriceCheckerBot)
-        )
-        .tapBoth(
-          t =>
-            ZIO
-              .logError(s"Failed to register OzonPriceCheckerBot: ${makeErrorCauseMessage(t, printStackTrace = true)}"),
-          botSession =>
-            ZIO.log(
-              s"Registered bot '${ozonPriceCheckerBot.getClass.getSimpleName}'. Session is running: ${botSession.isRunning}"
-            )
-        )
-    } yield botSession
 }
