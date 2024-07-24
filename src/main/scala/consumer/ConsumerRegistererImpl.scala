@@ -23,6 +23,8 @@ class ConsumerRegistererImpl extends ConsumerRegisterer:
     for {
       botSession <- ZIO
         .attempt(botsApplication.registerBot(token, longPollingUpdateConsumer))
-        .logged(s"register updates consumer ${longPollingUpdateConsumer.getClass.getSimpleName}")
-        .tap(botSession => ZIO.log("Session is running: ${botSession.isRunning}"))
+        .logged(
+          s"register updates consumer ${longPollingUpdateConsumer.getClass.getSimpleName}",
+          printResult = session => s"Session is ${if (session.isRunning) "" else "not "}running"
+        )
     } yield botSession

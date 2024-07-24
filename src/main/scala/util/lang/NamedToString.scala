@@ -6,5 +6,5 @@ trait NamedToString:
 
   override def toString: String =
     s"{ ${this.getClass.getSimpleName}: ${(0 until productArity)
-        .map(i => s"{ ${productElementName(i)}: ${productElement(i)} }")
+        .map(i => s"${productElementName(i)}: ${productElement(i)}")
         .mkString("{ ", ", ", " }")} }"
