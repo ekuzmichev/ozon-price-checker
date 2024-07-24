@@ -1,5 +1,5 @@
 package ru.ekuzmichev
-package lang
+package util.lang
 
 import java.time.{LocalDateTime, ZoneId}
 

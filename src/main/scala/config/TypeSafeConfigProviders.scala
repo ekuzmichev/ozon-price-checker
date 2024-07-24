@@ -7,9 +7,8 @@ import zio.config.magnolia.*
 import zio.config.typesafe.*
 import zio.{ConfigProvider, Task}
 
-object TypeSafeConfigProviders {
+object TypeSafeConfigProviders:
   def makeFromResourceFile(configResourceFilePath: String): Task[ConfigProvider] =
     ConfigProvider.fromTypesafeConfigZIO(
       ConfigFactory.parseResourcesAnySyntax(configResourceFilePath)
     )
-}

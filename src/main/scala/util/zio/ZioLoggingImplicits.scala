@@ -1,8 +1,8 @@
 package ru.ekuzmichev
 package util.zio
 
-import lang.Throwables
-import lang.Throwables.makeCauseSeqMessage
+import util.lang.Throwables
+import util.lang.Throwables.makeCauseSeqMessage
 
 import zio.ZIO
 

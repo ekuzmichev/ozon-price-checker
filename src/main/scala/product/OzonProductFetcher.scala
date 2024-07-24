@@ -1,7 +1,8 @@
 package ru.ekuzmichev
-package ozon
+package product
 
-import ozon.OzonProductFetcher.{OzonBaseUrl, ProductNameAsStringExtractor, RawPriceAsStringExtractor}
+import common.ProductId
+import product.OzonProductFetcher.{OzonBaseUrl, ProductNameAsStringExtractor, RawPriceAsStringExtractor}
 
 import net.ruippeixotog.scalascraper.browser.{Browser, JsoupBrowser}
 import net.ruippeixotog.scalascraper.dsl.DSL.*
@@ -10,37 +11,34 @@ import net.ruippeixotog.scalascraper.dsl.DSL.Parse.*
 import net.ruippeixotog.scalascraper.model.*
 import net.ruippeixotog.scalascraper.scraper.HtmlExtractor
 
-class OzonProductFetcher {
-  private val browser: Browser = JsoupBrowser()
+class OzonProductFetcher(browser: Browser) extends ProductFetcher:
+  private type BrowserDocument = browser.DocumentType
 
-  def fetchProductInfo(productId: String): ProductInfo = {
-    val productUrl: String                 = makeProductUrl(productId)
-    val responseHtml: browser.DocumentType = browser.get(productUrl)
-    val name                               = extractProductName(responseHtml)
-    val price                              = extractPrice(responseHtml)
+  override def fetchProductInfo(productId: ProductId): ProductInfo =
+    val productUrl: String            = makeProductUrl(productId)
+    val responseHtml: BrowserDocument = browser.get(productUrl)
+    val name: String                  = extractProductName(responseHtml)
+    val price: Double                 = extractPrice(responseHtml)
+
     ProductInfo(name, price)
-  }
 
-  private def extractProductName(responseHtml: browser.DocumentType): String =
+  private def extractProductName(responseHtml: BrowserDocument): String =
     (responseHtml >> ProductNameAsStringExtractor).trim()
 
-  private def extractPrice(responseHtml: browser.DocumentType): Double = {
+  private def extractPrice(responseHtml: BrowserDocument): Double =
     (responseHtml >> RawPriceAsStringExtractor)
       .trim()
       .replace(" ", "")
       .replace("₽", "")
       .replaceAll("[a-zA-Zа-яА-ЯЁё]", "")
       .toDouble
-  }
 
   private def makeProductUrl(productId: String): String =
     s"$OzonBaseUrl/product/$productId"
-}
 
-object OzonProductFetcher {
+object OzonProductFetcher:
   private val OzonBaseUrl: String = "https://www.ozon.ru"
   private val RawPriceAsStringExtractor: HtmlExtractor[Element, String] =
     extractor("div[data-widget=webPrice] span", text, asIs[String])
   private val ProductNameAsStringExtractor: HtmlExtractor[Element, String] =
     extractor("div[data-widget=webProductHeading] h1", text, asIs[String])
-}

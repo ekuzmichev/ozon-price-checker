@@ -9,15 +9,15 @@ import cron4s.{Cron, CronExpr}
 import java.time.LocalDateTime
 import scala.util.Try
 
-class Cron4sNextRimeProvider(cron: CronExpr) extends NextTimeProvider:
+class Cron4sNextTimeProvider(cron: CronExpr) extends NextTimeProvider:
   override def nexDateTime(from: LocalDateTime): Option[LocalDateTime] =
     cron.next[LocalDateTime](from)
 
   override def info: String = s"cron=$cron"
 
-object Cron4sNextRimeProvider:
-  def fromCronString(cronStr: String): Try[Cron4sNextRimeProvider] =
+object Cron4sNextTimeProvider:
+  def fromCronString(cronStr: String): Try[Cron4sNextTimeProvider] =
     Cron(cronStr.toLowerCase)
       .leftMap(error => new RuntimeException(s"Failed to build cron from $cronStr. Cause: $error"))
-      .map(cronExpr => new Cron4sNextRimeProvider(cronExpr))
+      .map(cronExpr => new Cron4sNextTimeProvider(cronExpr))
       .toTry

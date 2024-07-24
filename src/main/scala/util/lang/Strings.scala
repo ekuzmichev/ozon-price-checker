@@ -1,5 +1,5 @@
 package ru.ekuzmichev
-package lang
+package util.lang
 
 object Strings:
   def abbreviate(s: String, maxLength: Int = 1000): String =

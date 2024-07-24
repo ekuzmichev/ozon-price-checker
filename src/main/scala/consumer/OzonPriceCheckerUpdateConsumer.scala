@@ -1,10 +1,11 @@
 package ru.ekuzmichev
-package bot
+package consumer
 
+import bot.OzonPriceCheckerBotCommands
 import common.{ChatId, UserName}
-import ozon.OzonProductFetcher
-import schedule.Cron4sNextRimeProvider.fromCronString
-import schedule.{Cron4sNextRimeProvider, ZioScheduler}
+import product.ProductFetcher
+import schedule.Cron4sNextTimeProvider.fromCronString
+import schedule.{Cron4sNextTimeProvider, ZioScheduler}
 import store.*
 import store.ProductStore.ProductCandidate.*
 import store.ProductStore.{Product, ProductCandidate, SourceId}
@@ -16,20 +17,20 @@ import org.telegram.telegrambots.meta.api.objects.message.Message
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{LogAnnotation, Runtime, Task, ZIO}
 
-class OzonPriceCheckerBot(
+class OzonPriceCheckerUpdateConsumer(
     telegramClient: TelegramClient,
     productStore: ProductStore,
-    ozonProductFetcher: OzonProductFetcher,
+    productFetcher: ProductFetcher,
     zioScheduler: ZioScheduler,
     runtime: Runtime[Any]
-) extends ZioLongPollingSingleThreadUpdateConsumer(runtime) {
+) extends ZioLongPollingSingleThreadUpdateConsumer(runtime):
 
   override def consumeZio(update: Update): Task[Unit] =
     ZIO
       .when(update.hasMessage)(processMessage(update.getMessage))
       .unit
 
-  private def processMessage(message: Message): Task[Unit] = {
+  private def processMessage(message: Message): Task[Unit] =
     val chatId: ChatId     = message.getChatId.toString
     val userName: UserName = message.getFrom.getUserName
 
@@ -48,7 +49,6 @@ class OzonPriceCheckerBot(
         }
       }
       .unit
-  }
 
   private def processText(sourceId: SourceId, text: ChatId): Task[Unit] =
     def sendDefaultMsg() = sendTextMessage(sourceId.chatId, "Send me a command known to me.")
@@ -63,7 +63,7 @@ class OzonPriceCheckerBot(
                 case WaitingProductId =>
                   val productId = text // TODO: parse productId from URL, or plain text
                   ZIO
-                    .attempt(ozonProductFetcher.fetchProductInfo(text))
+                    .attempt(productFetcher.fetchProductInfo(text))
                     .tap(productInfo =>
                       sendTextMessage(
                         sourceId.chatId,
@@ -83,7 +83,7 @@ class OzonPriceCheckerBot(
                       s"ID: $productId\n\n" +
                       s"Price Threshold: $priceThreshold ₽\n\n" +
                       s"Added product to watches.\n\n" +
-                      s"To watch new product send me ${Commands.WatchNewProduct}"
+                      s"To watch new product send me ${OzonPriceCheckerBotCommands.WatchNewProduct}"
                   ) *>
                     productStore.resetProductCandidate(sourceId) *>
                     productStore.addProduct(sourceId, Product(productId, priceThreshold)) *>
@@ -123,30 +123,29 @@ class OzonPriceCheckerBot(
     } yield ()
 
   private def processCommand(sourceId: SourceId, text: ChatId): Task[Unit] =
-    if (text == Commands.Start) {
+    if (text == OzonPriceCheckerBotCommands.Start)
       processStartCommand(sourceId)
-    } else if (text == Commands.Stop) {
+    else if (text == OzonPriceCheckerBotCommands.Stop)
       processStopCommand(sourceId)
-    } else if (text == Commands.WatchNewProduct) {
+    else if (text == OzonPriceCheckerBotCommands.WatchNewProduct)
       processWatchNewProductCommand(sourceId)
-    } else if (text == Commands.UnwatchAllProducts) {
+    else if (text == OzonPriceCheckerBotCommands.UnwatchAllProducts)
       processUnwatchAllProductsCommand(sourceId)
-    } else {
+    else
       ZIO.log(s"Got unknown command $text") *>
         sendTextMessage(sourceId.chatId, s"I can not process command $text. Please send me a command known to me.")
-    }
 
   private def processStartCommand(sourceId: SourceId): Task[Unit] =
     initializeStoreEntry(sourceId)
-      .flatMap(initialized => {
+      .flatMap(initialized =>
         val msg =
           if (initialized)
             "I have added you to the Store."
           else
             "You have been already added to the Store before."
         sendTextMessage(sourceId.chatId, msg)
-      })
-      .logged(s"process command ${Commands.Start} ")
+      )
+      .logged(s"process command ${OzonPriceCheckerBotCommands.Start} ")
 
   private def initializeStoreEntry(sourceId: SourceId): Task[Boolean] =
     for {
@@ -168,23 +167,22 @@ class OzonPriceCheckerBot(
         else "You have been already removed from the Store before."
       _ <- sendTextMessage(sourceId.chatId, msg)
     } yield ())
-      .logged(s"process command ${Commands.Stop} ")
+      .logged(s"process command ${OzonPriceCheckerBotCommands.Stop} ")
 
   private def processWatchNewProductCommand(sourceId: SourceId): Task[Unit] =
     (for {
       initialized <- productStore.checkInitialized(sourceId)
       _ <-
-        if (initialized) {
+        if (initialized)
           sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.") *>
             productStore.updateProductCandidate(sourceId, WaitingProductId)
-        } else {
+        else
           sendTextMessage(
             sourceId.chatId,
-            s"You have not been yet initialized. Send me ${Commands.Start} command to fix it."
+            s"You have not been yet initialized. Send me ${OzonPriceCheckerBotCommands.Start} command to fix it."
           )
-        }
     } yield ())
-      .logged(s"process command ${Commands.WatchNewProduct}")
+      .logged(s"process command ${OzonPriceCheckerBotCommands.WatchNewProduct}")
 
   private def sendTextMessage(chatId: ChatId, message: String): Task[Unit] =
     ZIO.attempt {
@@ -196,6 +194,6 @@ class OzonPriceCheckerBot(
     productStore
       .emptyState(sourceId)
       .zipRight(sendTextMessage(sourceId.chatId, "I have removed all watched products."))
-      .logged(s"process command ${Commands.UnwatchAllProducts}")
+      .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchAllProducts}")
 
-}
+end OzonPriceCheckerUpdateConsumer

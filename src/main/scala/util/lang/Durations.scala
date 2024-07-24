@@ -1,5 +1,5 @@
 package ru.ekuzmichev
-package lang
+package util.lang
 
 object Durations:
   def printDuration(seconds: Long): String =

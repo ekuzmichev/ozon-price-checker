@@ -16,7 +16,7 @@ object TestCron4sZioSchedulerImplApp extends ZIOAppDefault {
     new ZioSchedulerImpl(new AlphaNumericJobIdGenerator())
       .schedule(
         ZIO.log(s"${LocalDateTime.now}: Run"),
-        new Cron4sNextRimeProvider(Cron.unsafeParse(cron)),
+        new Cron4sNextTimeProvider(Cron.unsafeParse(cron)),
         "logging-test-job"
       )
 }

@@ -3,7 +3,6 @@ package schedule
 
 import java.time.LocalDateTime
 
-trait NextTimeProvider {
+trait NextTimeProvider:
   def nexDateTime(from: LocalDateTime): Option[LocalDateTime]
   def info: String = "#"
-}

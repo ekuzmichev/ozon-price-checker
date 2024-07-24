@@ -1,13 +1,13 @@
 package ru.ekuzmichev
-package app
+package telegram
 
-import lang.Throwables.makeCauseSeqMessage
+import util.lang.Throwables.makeCauseSeqMessage
 
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication
 import zio.{RIO, Scope, UIO, ZIO}
 
-object BotsApplicationCreator:
-  def createBotsApplication(): RIO[Scope, TelegramBotsLongPollingApplication] =
+object BotsApplicationScopes:
+  def makeLongPollingBotsApplication(): RIO[Scope, TelegramBotsLongPollingApplication] =
     ZIO.acquireRelease {
       ZIO
         .attempt(new TelegramBotsLongPollingApplication)

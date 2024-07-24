@@ -1,5 +1,5 @@
 package ru.ekuzmichev
-package lang
+package util.lang
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
@@ -24,4 +24,3 @@ object Throwables:
       else loop(cause, chain :+ cause)
 
     loop(t, ArrayBuffer(t)).toList
-  

@@ -1,11 +1,13 @@
 package ru.ekuzmichev
-package bot
+package consumer
 
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer
 import org.telegram.telegrambots.meta.api.objects.Update
 import zio.{Runtime, Task, Unsafe, ZIO}
 
-abstract class ZioLongPollingSingleThreadUpdateConsumer(runtime: Runtime[Any]) extends LongPollingSingleThreadUpdateConsumer {
+abstract class ZioLongPollingSingleThreadUpdateConsumer(runtime: Runtime[Any])
+    extends LongPollingSingleThreadUpdateConsumer:
+
   override def consume(update: Update): Unit =
     Unsafe.unsafe { implicit unsafe =>
       runtime.unsafe.run {
@@ -15,4 +17,3 @@ abstract class ZioLongPollingSingleThreadUpdateConsumer(runtime: Runtime[Any]) e
     }
 
   def consumeZio(update: Update): Task[Unit]
-}

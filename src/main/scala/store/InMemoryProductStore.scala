@@ -6,18 +6,18 @@ import store.ProductStore.{Product, ProductCandidate, SourceId, SourceState}
 
 import zio.{Ref, Task, ZIO}
 
-class InMemoryProductStore(productWatchesRef: Ref[ProductState]) extends ProductStore:
+class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductStore:
   override def checkInitialized(sourceId: SourceId): Task[Boolean] =
-    productWatchesRef.get.map(_.contains(sourceId))
+    productStateRef.get.map(_.contains(sourceId))
 
   override def emptyState(sourceId: SourceId): Task[Unit] =
-    productWatchesRef.update(_ + (sourceId -> SourceState.empty))
+    productStateRef.update(_ + (sourceId -> SourceState.empty))
 
   override def clearState(sourceId: SourceId): Task[Unit] =
-    productWatchesRef.update(_ - sourceId)
+    productStateRef.update(_ - sourceId)
 
   override def readSourceState(sourceId: SourceId): Task[Option[SourceState]] =
-    productWatchesRef.get.map(_.get(sourceId))
+    productStateRef.get.map(_.get(sourceId))
 
   override def updateProductCandidate(
       sourceId: SourceId,
@@ -47,7 +47,7 @@ class InMemoryProductStore(productWatchesRef: Ref[ProductState]) extends Product
       updated <- maybeSourceState match
         case Some(sourceState) =>
           val newSourceState = updateSourceStateFn(sourceState)
-          productWatchesRef.update(_ + (sourceId -> newSourceState)).as(true)
+          productStateRef.update(_ + (sourceId -> newSourceState)).as(true)
         case None => ZIO.succeed(false)
     } yield updated
 

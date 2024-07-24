@@ -4,7 +4,7 @@ package store
 import common.{ChatId, ProductId, UserName}
 import store.ProductStore.{ProductCandidate, SourceId, SourceState}
 
-import zio.{Fiber, FiberRef, Task}
+import zio.{Fiber, Task}
 
 trait ProductStore:
   def checkInitialized(sourceId: SourceId): Task[Boolean]
