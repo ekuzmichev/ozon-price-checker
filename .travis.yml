@@ -1,6 +1,0 @@
-language: scala
-scala:
-  - 3.3.3
-jdk: openjdk17
-script:
-  - sbt clean coverage test coverageReport
