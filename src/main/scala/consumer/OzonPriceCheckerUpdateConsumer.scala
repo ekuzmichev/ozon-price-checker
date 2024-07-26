@@ -138,7 +138,7 @@ class OzonPriceCheckerUpdateConsumer(
                       else
                         sendTextMessage(
                           sourceId.chatId,
-                          s"Product price $productPrice ₽ is already <= price threshold $priceThreshold ₽.\n\n" +
+                          s"Product '$productId' price $productPrice ₽ is already <= price threshold $priceThreshold ₽.\n\n" +
                             s"Send new price threshold < $productPrice ₽ or ${OzonPriceCheckerBotCommands.Cancel}"
                         )
                     case None =>
@@ -160,6 +160,8 @@ class OzonPriceCheckerUpdateConsumer(
       processStartCommand(sourceId)
     else if (text == OzonPriceCheckerBotCommands.Stop)
       processStopCommand(sourceId)
+    else if (text == OzonPriceCheckerBotCommands.Cancel)
+      processCancelCommand(sourceId)
     else if (text == OzonPriceCheckerBotCommands.WatchNewProduct)
       processWatchNewProductCommand(sourceId)
     else if (text == OzonPriceCheckerBotCommands.UnwatchAllProducts)
@@ -201,6 +203,14 @@ class OzonPriceCheckerUpdateConsumer(
       _ <- sendTextMessage(sourceId.chatId, msg)
     } yield ())
       .logged(s"process command ${OzonPriceCheckerBotCommands.Stop} ")
+
+  private def processCancelCommand(sourceId: SourceId): Task[Unit] =
+    productStore.resetProductCandidate(sourceId) *>
+      sendTextMessage(
+        sourceId.chatId,
+        "Current product addition has been cancelled.\n\n" +
+          s"Send me ${OzonPriceCheckerBotCommands.WatchNewProduct} to start over"
+      )
 
   private def processWatchNewProductCommand(sourceId: SourceId): Task[Unit] =
     (for {
