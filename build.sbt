@@ -6,8 +6,8 @@ val zioVersion = "4.0.2"
 
 lazy val root = (project in file("."))
   .settings(
-    name             := "ozon-price-checker",
-    idePackagePrefix := Some("ru.ekuzmichev"),
+    name                                          := "ozon-price-checker",
+    idePackagePrefix.withRank(KeyRanks.Invisible) := Some("ru.ekuzmichev"),
     libraryDependencies ++= Seq(
       "net.ruippeixotog"              %% "scala-scraper"            % "3.1.1",
       "org.telegram"                   % "telegrambots-client"      % "7.7.1",
