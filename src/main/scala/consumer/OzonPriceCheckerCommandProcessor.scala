@@ -11,7 +11,7 @@ import util.zio.ZioLoggingImplicits.Ops
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{Task, ZIO}
 
-class CommandProcessorImpl(productStore: ProductStore, telegramClient: TelegramClient) extends CommandProcessor:
+class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient) extends CommandProcessor:
   private implicit val _telegramClient: TelegramClient = telegramClient
 
   def processCommand(sourceId: SourceId, text: String): Task[Unit] =

@@ -12,7 +12,6 @@ import store.ProductStore.{Product, ProductCandidate, SourceId}
 import util.telegram.MessageSendingUtils.sendTextMessage
 import util.zio.ZioLoggingImplicits.Ops
 
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.message.Message
 import org.telegram.telegrambots.meta.generics.TelegramClient

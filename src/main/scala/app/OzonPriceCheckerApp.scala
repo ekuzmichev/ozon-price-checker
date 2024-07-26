@@ -40,7 +40,7 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       BrowserLayers.jsoup,
       JobIdGeneratorLayers.alphaNumeric,
       ProductIdParserLayers.ozon,
-      CommandProcessorLayers.impl
+      CommandProcessorLayers.ozonPriceChecker
     )
 
   private def provideAppConfig(): RIO[AppConfigProvider, AppConfig] =
