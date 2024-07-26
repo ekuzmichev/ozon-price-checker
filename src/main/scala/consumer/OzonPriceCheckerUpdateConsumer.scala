@@ -53,7 +53,7 @@ class OzonPriceCheckerUpdateConsumer(
   private def processText(sourceId: SourceId, text: ChatId): Task[Unit] =
     def sendDefaultMsg() = sendTextMessage(sourceId.chatId, "Send me a command known to me.")
     for {
-      _                <- ZIO.log(s"Got text '$text''")
+      _                <- ZIO.log(s"Got text '$text'")
       maybeSourceState <- productStore.readSourceState(sourceId)
       _ <- maybeSourceState match
         case Some(sourceState) =>
