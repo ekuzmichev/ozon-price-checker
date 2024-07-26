@@ -24,8 +24,10 @@ object ProductStore:
   sealed trait ProductCandidate
 
   object ProductCandidate:
-    case object WaitingProductId                           extends ProductCandidate
-    case class WaitingPriceThreshold(productId: ProductId) extends ProductCandidate with NamedToString
+    case object WaitingProductId extends ProductCandidate
+    case class WaitingPriceThreshold(productId: ProductId, productPrice: Double)
+        extends ProductCandidate
+        with NamedToString
 
   case class SourceState(
       products: Seq[Product],
