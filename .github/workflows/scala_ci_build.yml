@@ -20,7 +20,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '17'
-        distribution: 'temurin'
+        distribution: 'liberica'
         cache: 'sbt'
     - name: Run SBT tests
       run: sbt clean test
