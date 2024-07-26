@@ -11,17 +11,18 @@ import zio.{RLayer, ZIO, ZLayer}
 
 object UpdateConsumerLayers:
   val ozonPriceChecker: RLayer[
-    TelegramClient with ProductStore with ProductFetcher with ZioScheduler with ProductIdParser,
+    TelegramClient with ProductStore with ProductFetcher with ZioScheduler with ProductIdParser with CommandProcessor,
     LongPollingUpdateConsumer
   ] =
     ZLayer.fromZIO {
       for {
-        telegramClient  <- ZIO.service[TelegramClient]
-        productStore    <- ZIO.service[ProductStore]
-        productFetcher  <- ZIO.service[ProductFetcher]
-        zioScheduler    <- ZIO.service[ZioScheduler]
-        productIdParser <- ZIO.service[ProductIdParser]
-        runtime         <- ZIO.runtime[Any]
+        telegramClient   <- ZIO.service[TelegramClient]
+        productStore     <- ZIO.service[ProductStore]
+        productFetcher   <- ZIO.service[ProductFetcher]
+        zioScheduler     <- ZIO.service[ZioScheduler]
+        productIdParser  <- ZIO.service[ProductIdParser]
+        commandProcessor <- ZIO.service[CommandProcessor]
+        runtime          <- ZIO.runtime[Any]
 
       } yield new OzonPriceCheckerUpdateConsumer(
         telegramClient,
@@ -29,6 +30,7 @@ object UpdateConsumerLayers:
         productFetcher,
         zioScheduler,
         productIdParser,
+        commandProcessor,
         runtime
       )
     }

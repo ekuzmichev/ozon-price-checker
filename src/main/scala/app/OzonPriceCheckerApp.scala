@@ -2,7 +2,7 @@ package ru.ekuzmichev
 package app
 
 import config.{AppConfig, AppConfigLayers, AppConfigProvider}
-import consumer.{ConsumerRegisterer, ConsumerRegistererLayers, UpdateConsumerLayers}
+import consumer.{CommandProcessorLayers, ConsumerRegisterer, ConsumerRegistererLayers, UpdateConsumerLayers}
 import product.{ProductFetcherLayers, ProductIdParserLayers}
 import scalascraper.BrowserLayers
 import schedule.{JobIdGeneratorLayers, ZioSchedulerLayers}
@@ -39,7 +39,8 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       ZioSchedulerLayers.impl,
       BrowserLayers.jsoup,
       JobIdGeneratorLayers.alphaNumeric,
-      ProductIdParserLayers.ozon
+      ProductIdParserLayers.ozon,
+      CommandProcessorLayers.impl
     )
 
   private def provideAppConfig(): RIO[AppConfigProvider, AppConfig] =
