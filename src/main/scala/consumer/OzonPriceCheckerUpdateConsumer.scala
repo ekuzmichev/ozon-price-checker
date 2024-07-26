@@ -3,7 +3,7 @@ package consumer
 
 import bot.OzonPriceCheckerBotCommands
 import common.{ChatId, UserName}
-import product.ProductFetcher
+import product.{ProductFetcher, ProductIdParser}
 import schedule.Cron4sNextTimeProvider.fromCronString
 import schedule.{Cron4sNextTimeProvider, ZioScheduler}
 import store.*
@@ -22,6 +22,7 @@ class OzonPriceCheckerUpdateConsumer(
     productStore: ProductStore,
     productFetcher: ProductFetcher,
     zioScheduler: ZioScheduler,
+    productIdParser: ProductIdParser,
     runtime: Runtime[Any]
 ) extends ZioLongPollingSingleThreadUpdateConsumer(runtime):
 
@@ -61,20 +62,25 @@ class OzonPriceCheckerUpdateConsumer(
             case Some(productCandidate) =>
               productCandidate match
                 case WaitingProductId =>
-                  val productId = text // TODO: parse productId from URL, or plain text
-                  ZIO
-                    .attempt(productFetcher.fetchProductInfo(text))
-                    .tap(productInfo =>
-                      sendTextMessage(
-                        sourceId.chatId,
-                        s"I have fetched product info from OZON for you:\n\n" +
-                          s"ID: $productId\n" +
-                          s"Name: ${productInfo.name}\n\n" +
-                          s"Current Price: ${productInfo.price} ₽\n\n" +
-                          s"Send me price threshold."
-                      ) *>
-                        productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId))
-                    )
+                  productIdParser.parse(text) match
+                    case Right(productId) =>
+                      ZIO
+                        .attempt(productFetcher.fetchProductInfo(productId))
+                        .tap(productInfo =>
+                          sendTextMessage(
+                            sourceId.chatId,
+                            s"I have fetched product info from OZON for you:\n\n" +
+                              s"ID: $productId\n" +
+                              s"Name: ${productInfo.name}\n\n" +
+                              s"Current Price: ${productInfo.price} ₽\n\n" +
+                              s"Send me price threshold."
+                          ) *>
+                            productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId))
+                        )
+                    case Left(error) =>
+                      ZIO.log(s"Failed to parse productId from text '$text'. Cause: $error") *>
+                        sendTextMessage(sourceId.chatId, s"Send me valid URL or product ID")
+
                 case WaitingPriceThreshold(productId) =>
                   val priceThreshold = text.toInt // TODO: parse priceThreshold more safe
                   sendTextMessage(
