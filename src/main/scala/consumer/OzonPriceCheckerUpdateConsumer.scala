@@ -139,7 +139,12 @@ class OzonPriceCheckerUpdateConsumer(
               .flatMap { products =>
                 sendTextMessage(
                   sourceId.chatId,
-                  s"Here are your watched products:\n${products.mkString("\n")}"
+                  s"Here are your watched products:\n\n" +
+                    s"${products.zipWithIndex
+                        .map { case (product, index) =>
+                          s"${index + 1}) ${product.id}\n\t${product.priceThreshold} ₽"
+                        }
+                        .mkString("\n")}"
                 )
               },
             _,
