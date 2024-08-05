@@ -1,13 +1,24 @@
-ThisBuild / version := "0.1.0-SNAPSHOT"
-
+ThisBuild / version      := "0.1.0-SNAPSHOT"
+ThisBuild / organization := "ru.ekuzmichev"
 ThisBuild / scalaVersion := "3.3.3"
 
 val zioVersion = "4.0.2"
+
+ThisBuild / assemblyMergeStrategy := {
+  case PathList("app.local.conf")            => MergeStrategy.discard
+  case PathList("logback.xml")               => MergeStrategy.discard
+  case PathList("logback-test.xml")          => MergeStrategy.discard
+  case x if x.endsWith("module-info.class")  => MergeStrategy.concat
+  case x if x.endsWith("okio.kotlin_module") => MergeStrategy.concat
+  case x                                     => MergeStrategy.defaultMergeStrategy(x)
+}
 
 lazy val root = (project in file("."))
   .settings(
     name                                          := "ozon-price-checker",
     idePackagePrefix.withRank(KeyRanks.Invisible) := Some("ru.ekuzmichev"),
+    assembly / mainClass                          := Some("ru.ekuzmichev.app.OzonPriceCheckerApp"),
+    assembly / assemblyJarName                    := s"${name.value}-${version.value}.jar",
     libraryDependencies ++= Seq(
       "net.ruippeixotog"              %% "scala-scraper"            % "3.1.1",
       "org.telegram"                   % "telegrambots-client"      % "7.7.1",
