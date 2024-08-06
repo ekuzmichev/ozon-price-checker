@@ -4,13 +4,10 @@ package consumer
 import bot.OzonPriceCheckerBotCommands
 import common.{ChatId, ProductId, UserName}
 import product.{ProductFetcher, ProductIdParser}
-import schedule.Cron4sNextTimeProvider.fromCronString
-import schedule.{Cron4sNextTimeProvider, ZioScheduler}
 import store.*
 import store.ProductStore.ProductCandidate.*
 import store.ProductStore.{Product, ProductCandidate, SourceId}
 import util.telegram.MessageSendingUtils.sendTextMessage
-import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.api.objects.message.Message
@@ -21,9 +18,9 @@ class OzonPriceCheckerUpdateConsumer(
     telegramClient: TelegramClient,
     productStore: ProductStore,
     productFetcher: ProductFetcher,
-    zioScheduler: ZioScheduler,
     productIdParser: ProductIdParser,
     commandProcessor: CommandProcessor,
+    productWatchingJobScheduler: ProductWatchingJobScheduler,
     runtime: Runtime[Any]
 ) extends ZioLongPollingSingleThreadUpdateConsumer(runtime):
 
@@ -93,25 +90,34 @@ class OzonPriceCheckerUpdateConsumer(
           sendDefaultMsg()
     } yield ()
 
-  private def onProductId(sourceId: SourceId, productId: ProductId) = {
-    ZIO
-      .attempt(productFetcher.fetchProductInfo(productId))
-      .tap(productInfo =>
-        sendTextMessage(
-          sourceId.chatId,
-          s"I have fetched product info from OZON for you:\n\n" +
-            s"ID: $productId\n" +
-            s"Name: ${productInfo.name}\n\n" +
-            s"Current Price: ${productInfo.price} ₽\n\n" +
-            s"Send me price threshold."
-        )
-      )
-      .flatMap(productInfo =>
-        productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId, productInfo.price))
-      )
-  }
+  private def onProductId(sourceId: SourceId, productId: ProductId) =
+    productStore.checkHasProductId(sourceId, productId).flatMap {
+      case true =>
+        ZIO.logDebug(s"Source ID $sourceId already contains product with ID $productId") *>
+          sendTextMessage(
+            sourceId.chatId,
+            s"You have already added product with ID $productId.\n\n" +
+              s"Send me another product ID or command ${OzonPriceCheckerBotCommands.Cancel}"
+          )
+      case false =>
+        ZIO
+          .attempt(productFetcher.fetchProductInfo(productId))
+          .tap(productInfo =>
+            sendTextMessage(
+              sourceId.chatId,
+              s"I have fetched product info from OZON for you:\n\n" +
+                s"ID: $productId\n" +
+                s"Name: ${productInfo.name}\n\n" +
+                s"Current Price: ${productInfo.price} ₽\n\n" +
+                s"Send me price threshold."
+            )
+          )
+          .flatMap(productInfo =>
+            productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId, productInfo.price))
+          )
+    }
 
-  private def onPriceThreshold(sourceId: SourceId, productId: ProductId, priceThreshold: Int) = {
+  private def onPriceThreshold(sourceId: SourceId, productId: ProductId, priceThreshold: Int) =
     sendTextMessage(
       sourceId.chatId,
       s"I have got price threshold from you:\n\n" +
@@ -123,42 +129,11 @@ class OzonPriceCheckerUpdateConsumer(
       productStore.resetProductCandidate(sourceId) *>
       productStore.addProduct(sourceId, Product(productId, priceThreshold)) *>
       hasFirstProductAdded(sourceId)
-        .tap(ZIO.when(_)(scheduleProductsWatching(sourceId)))
-  }
+        .tap(ZIO.when(_)(productWatchingJobScheduler.scheduleProductsWatching(sourceId)))
 
-  private def scheduleProductsWatching(sourceId: SourceId) = {
-    ZIO
-      .fromTry(fromCronString("0 */1 * * * ?"))
-      .logged("create cron4s time provider", printResult = _.info)
-      .flatMap {
-        zioScheduler
-          .schedule(
-            productStore
-              .readSourceState(sourceId)
-              .map(_.fold(Seq.empty[Product])(_.products))
-              .flatMap { products =>
-                sendTextMessage(
-                  sourceId.chatId,
-                  s"Here are your watched products:\n\n" +
-                    s"${products.zipWithIndex
-                        .map { case (product, index) =>
-                          s"${index + 1}) ${product.id}\n\t${product.priceThreshold} ₽"
-                        }
-                        .mkString("\n")}"
-                )
-              },
-            _,
-            s"${sourceId.userName}|${sourceId.chatId}"
-          )
-          .forkDaemon
-      }
-      .ignore
-  }
-
-  private def hasFirstProductAdded(sourceId: SourceId) = {
+  private def hasFirstProductAdded(sourceId: SourceId) =
     productStore
       .readSourceState(sourceId)
       .map(_.exists(_.products.size == 1))
-  }
 
 end OzonPriceCheckerUpdateConsumer

@@ -2,7 +2,7 @@ package ru.ekuzmichev
 package app
 
 import config.{AppConfig, AppConfigLayers}
-import consumer.{CommandProcessorLayers, ConsumerRegisterer, ConsumerRegistererLayers, UpdateConsumerLayers}
+import consumer.*
 import encryption.EncDecLayers
 import product.{ProductFetcherLayers, ProductIdParserLayers}
 import scalascraper.BrowserLayers
@@ -51,7 +51,8 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
           JobIdGeneratorLayers.alphaNumeric,
           ProductIdParserLayers.ozon,
           CommandProcessorLayers.ozonPriceChecker,
-          EncDecLayers.aes256(encryptionPasswordEnv.get)
+          EncDecLayers.aes256(encryptionPasswordEnv.get),
+          ProductWatchingJobSchedulerLayers.impl
         )
       }
 
