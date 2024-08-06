@@ -11,13 +11,13 @@ import store.ProductStoreLayers
 import telegram.{BotsApplicationScopes, TelegramClientLayers}
 import util.lang.Durations.printDuration
 import util.lang.JavaTime.toEpochSeconds
-import util.lang.Throwables.makeCauseSeqMessage
+import util.lang.Throwables.{failure, makeCauseSeqMessage}
 import util.zio.ZioClock.getCurrentDateTime
 
 import org.telegram.telegrambots.longpolling.BotSession
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
 import zio.logging.backend.SLF4J
-import zio.{RIO, Schedule, Scope, TaskLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
+import zio.{RIO, RLayer, Schedule, Scope, TaskLayer, ZIO, ZIOAppArgs, ZIOAppDefault, ZLayer, durationInt}
 
 import java.time.LocalDateTime
 
@@ -29,21 +29,31 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       .catchAll(t => ZIO.fail(s"Got error while running ${this.getClass.getSimpleName}: $makeCauseSeqMessage(t)"))
       .provideLayer(programLayer)
 
-  private def programLayer: TaskLayer[AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer] =
-    ZLayer.make[AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer](
-      AppConfigLayers.impl,
-      ConsumerRegistererLayers.impl,
-      UpdateConsumerLayers.ozonPriceChecker,
-      TelegramClientLayers.okHttp,
-      ProductStoreLayers.inMemory,
-      ProductFetcherLayers.ozon,
-      ZioSchedulerLayers.impl,
-      BrowserLayers.jsoup,
-      JobIdGeneratorLayers.alphaNumeric,
-      ProductIdParserLayers.ozon,
-      CommandProcessorLayers.ozonPriceChecker,
-      EncDecLayers.aes256
-    )
+  private def programLayer: RLayer[ZIOAppArgs, AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer] =
+    ZLayer
+      .fromZIO(
+        getArgs.flatMap(args =>
+          args.headOption match
+            case Some(encryptionPassword) => ZIO.succeed(encryptionPassword)
+            case None                     => ZIO.fail(failure(s"No encryption password provided"))
+        )
+      )
+      .flatMap { encryptionPasswordEnv =>
+        ZLayer.make[AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer](
+          AppConfigLayers.impl,
+          ConsumerRegistererLayers.impl,
+          UpdateConsumerLayers.ozonPriceChecker,
+          TelegramClientLayers.okHttp,
+          ProductStoreLayers.inMemory,
+          ProductFetcherLayers.ozon,
+          ZioSchedulerLayers.impl,
+          BrowserLayers.jsoup,
+          JobIdGeneratorLayers.alphaNumeric,
+          ProductIdParserLayers.ozon,
+          CommandProcessorLayers.ozonPriceChecker,
+          EncDecLayers.aes256(encryptionPasswordEnv.get)
+        )
+      }
 
   private def runBots(): RIO[LongPollingUpdateConsumer with ConsumerRegisterer with AppConfig, Unit] =
     ZIO.scoped {
