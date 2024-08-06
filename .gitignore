@@ -26,3 +26,6 @@ out/
 
 ### Logback ###
 logback.xml
+
+### Logs ###
+*.log
