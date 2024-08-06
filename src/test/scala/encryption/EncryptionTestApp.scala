@@ -13,4 +13,6 @@ object EncryptionTestApp extends ZIOAppDefault:
       encDec        <- ZIO.service[EncDec]
       encryptedText <- encDec.encrypt(text)
       _             <- ZIO.log(s"Encrypted text: $encryptedText")
-    } yield ()).provideLayer(EncDecLayers.aes256)
+    } yield ()).provideLayer(
+      ZLayer.fromZIO(Console.readLine("Encryption password: ")).flatMap(env => EncDecLayers.aes256(env.get))
+    )
