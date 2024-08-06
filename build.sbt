@@ -32,6 +32,7 @@ lazy val root = (project in file("."))
       "com.github.alonsodomin.cron4s" %% "cron4s-core"              % "0.7.0",
       "org.typelevel"                 %% "cats-core"                % "2.12.0",
       "io.lemonlabs"                  %% "scala-uri"                % "4.0.3",
+      "org.jasypt"                     % "jasypt"                   % "1.9.3",
       "org.scalatest"                 %% "scalatest"                % "3.2.19" % Test,
       "dev.zio"                       %% "zio-test"                 % "2.1.6"  % Test
     )

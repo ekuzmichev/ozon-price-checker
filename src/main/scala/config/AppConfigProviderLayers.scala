@@ -1,7 +1,9 @@
 package ru.ekuzmichev
 package config
 
-import zio.{ULayer, ZLayer}
+import encryption.EncDec
+
+import zio.{RLayer, ZLayer}
 
 object AppConfigProviderLayers:
-  val impl: ULayer[AppConfigProvider] = ZLayer.succeed(new AppConfigProviderImpl)
+  val impl: RLayer[EncDec, AppConfigProvider] = ZLayer.fromFunction(new AppConfigProviderImpl(_))

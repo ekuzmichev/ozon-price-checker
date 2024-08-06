@@ -1,8 +1,9 @@
 package ru.ekuzmichev
 package app
 
-import config.{AppConfig, AppConfigLayers, AppConfigProvider}
+import config.{AppConfig, AppConfigLayers}
 import consumer.{CommandProcessorLayers, ConsumerRegisterer, ConsumerRegistererLayers, UpdateConsumerLayers}
+import encryption.EncDecLayers
 import product.{ProductFetcherLayers, ProductIdParserLayers}
 import scalascraper.BrowserLayers
 import schedule.{JobIdGeneratorLayers, ZioSchedulerLayers}
@@ -40,13 +41,9 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       BrowserLayers.jsoup,
       JobIdGeneratorLayers.alphaNumeric,
       ProductIdParserLayers.ozon,
-      CommandProcessorLayers.ozonPriceChecker
+      CommandProcessorLayers.ozonPriceChecker,
+      EncDecLayers.aes256
     )
-
-  private def provideAppConfig(): RIO[AppConfigProvider, AppConfig] =
-    ZIO
-      .serviceWithZIO[AppConfigProvider](_.provideAppConfig())
-      .tap(appConfig => ZIO.log(s"Got app configuration: $appConfig"))
 
   private def runBots(): RIO[LongPollingUpdateConsumer with ConsumerRegisterer with AppConfig, Unit] =
     ZIO.scoped {

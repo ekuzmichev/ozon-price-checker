@@ -3,7 +3,7 @@ package config
 
 import util.lang.NamedToString
 
-case class Sensitive[T](value: T):
+case class Sensitive(value: String):
   override def toString: String = s"***"
 
-case class AppConfig(botToken: Sensitive[String], priceCheckingCron: String) extends NamedToString
+case class AppConfig(botToken: Sensitive, priceCheckingCron: String) extends NamedToString

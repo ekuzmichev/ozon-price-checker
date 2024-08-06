@@ -3,8 +3,13 @@ package util.lang
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
+import scala.util.control.NoStackTrace
 
 object Throwables:
+  case class OzonPriceCheckerException(msg: String) extends RuntimeException(msg) with NoStackTrace
+
+  def failure(msg: => String): OzonPriceCheckerException = OzonPriceCheckerException(msg)
+
   def makeCauseSeqMessage(t: Throwable, printStackTrace: Boolean = false, abbreviate: Boolean = true): String =
     val rawCauseSeqMessage = causeChainOf(t).mkString(" caused by ")
     val causeSeqMessage    = if (abbreviate) Strings.abbreviate(rawCauseSeqMessage) else rawCauseSeqMessage

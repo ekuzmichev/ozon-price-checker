@@ -1,8 +1,10 @@
 package ru.ekuzmichev
 package config
 
-import zio.{TaskLayer, ULayer, ZLayer}
+import encryption.EncDec
+
+import zio.{RLayer, ZLayer}
 
 object AppConfigLayers:
-  val impl: TaskLayer[AppConfig] =
+  val impl: RLayer[EncDec, AppConfig] =
     AppConfigProviderLayers.impl.flatMap(env => ZLayer.fromZIO(env.get.provideAppConfig()))
