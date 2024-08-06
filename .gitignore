@@ -23,3 +23,6 @@ out/
 
 ### Local Config Files ###
 *.local.conf
+
+### Logback ###
+logback.xml
