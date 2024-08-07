@@ -16,9 +16,12 @@ class FileCacheStateRepository(filePath: String) extends CacheStateRepository:
           ZIO
             .attempt(file.contentAsString)
             .flatMap(json =>
-              ZIO
-                .fromEither(decode[CacheState](json))
-                .mapError(error => failure(s"Failed to read cache state: $error"))
+              if (json.isBlank)
+                ZIO.succeed(CacheState.empty)
+              else
+                ZIO
+                  .fromEither(decode[CacheState](json))
+                  .mapError(error => failure(s"Failed to read cache state: $error"))
             )
         else ZIO.succeed(CacheState.empty)
       )
