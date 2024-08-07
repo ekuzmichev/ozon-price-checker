@@ -15,14 +15,14 @@ object ProductWatchingJobSchedulerLayers:
     ProductWatchingJobScheduler
   ] =
     ZLayer.fromZIO(
-      for {
+      for
         telegramClient          <- ZIO.service[TelegramClient]
         productStore            <- ZIO.service[ProductStore]
         productFetcher          <- ZIO.service[ProductFetcher]
         zioScheduler            <- ZIO.service[ZioScheduler]
         appConfig               <- ZIO.service[AppConfig]
         scheduleFiberRuntimeRef <- Ref.make[Option[Fiber.Runtime[Any, Unit]]](None)
-      } yield new ProductWatchingJobSchedulerImpl(
+      yield new ProductWatchingJobSchedulerImpl(
         telegramClient,
         productStore,
         productFetcher,

@@ -19,7 +19,7 @@ object Schedulers:
       .flatMap { currentDateTime =>
         def calculateDurationInSecs: Long = toEpochSeconds(currentDateTime) - toEpochSeconds(startDateTime)
 
-        ZIO.log(s"Bot is running already ${printDuration(calculateDurationInSecs)}")
+        ZIO.log(s"Bot is running already ${printDuration(calculateDurationInSecs)} since $startDateTime")
       }
       .schedule(Schedule.fixed(zio.Duration.fromScala(logBotStatusInterval)))
       .unit

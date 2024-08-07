@@ -24,17 +24,17 @@ class ZioSchedulerImpl(jobIdGenerator: JobIdGenerator) extends ZioScheduler:
     }
 
   private def makeJobLabel[A, E, R](label: String, jobId: String) =
-    if (label.trim.isEmpty) s"$jobId" else s"$label|$jobId"
+    if label.trim.isEmpty then s"$jobId" else s"$label|$jobId"
 
   private def doSchedule[R, E, A](
       effect: ZIO[R, E, A],
       nextTimeProvider: NextTimeProvider
   ): ZIO[R, Any, Unit] =
-    for {
+    for
       jobRunNumberRef <- Ref.make(0)
       _               <- ZIO.logDebug(s"Scheduling job by time provider ${nextTimeProvider.info}")
       _               <- runAtNextTime(effect, nextTimeProvider, jobRunNumberRef).repeat(Schedule.forever)
-    } yield ()
+    yield ()
 
   private def runAtNextTime[R, E, A](
       effect: ZIO[R, E, A],
@@ -43,23 +43,23 @@ class ZioSchedulerImpl(jobIdGenerator: JobIdGenerator) extends ZioScheduler:
   ): ZIO[R, Any, Unit] =
     jobRunNumberRef.get.flatMap { jobRunNumber =>
       ZIO.logAnnotate("jobRunNumber", jobRunNumber.toString) {
-        for {
+        for
           sleepDuration <- calculateSleepDuration(nextTimeProvider, jobRunNumber)
           _             <- ZIO.log(s"Sleeping ${sleepDuration.render} before the job run")
           _             <- runDelayed(effect, sleepDuration)
           _             <- jobRunNumberRef.update(_ + 1)
-        } yield ()
+        yield ()
       }
     }
 
   private def calculateSleepDuration(nextTimeProvider: NextTimeProvider, jobRunNumber: Int): Task[Duration] =
-    for {
+    for
       now <- getNow
       next <- ZIO
         .fromOption(nextTimeProvider.nexDateTime(now))
-        .orElseFail(if (jobRunNumber == 0) TimeProviderVoid else TimeProviderExhausted)
+        .orElseFail(if jobRunNumber == 0 then TimeProviderVoid else TimeProviderExhausted)
       _ <- ZIO.log(s"Got next run time: $next")
-    } yield Duration.fromNanos(now.until(next, ChronoUnit.NANOS))
+    yield Duration.fromNanos(now.until(next, ChronoUnit.NANOS))
 
   private def getNow: UIO[LocalDateTime] = ZIO.clock.flatMap(_.localDateTime)
 
@@ -72,7 +72,7 @@ class ZioSchedulerImpl(jobIdGenerator: JobIdGenerator) extends ZioScheduler:
             res => getNow.flatMap(now => ZIO.logDebug(s"Job finished at $now with result: $res"))
           )
           .ignore
-    if (sleepDuration.isZero) io else io.delay(sleepDuration)
+    if sleepDuration.isZero then io else io.delay(sleepDuration)
 
 object ZioSchedulerImpl:
   case object TimeProviderVoid      extends RuntimeException with NoStackTrace

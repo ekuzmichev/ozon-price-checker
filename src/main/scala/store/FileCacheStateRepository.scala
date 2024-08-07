@@ -12,12 +12,11 @@ class FileCacheStateRepository(filePath: String) extends CacheStateRepository:
     ZIO
       .attempt(asScalaFile)
       .flatMap(file =>
-        if (file.exists)
+        if file.exists then
           ZIO
             .attempt(file.contentAsString)
             .flatMap(json =>
-              if (json.isBlank)
-                ZIO.succeed(CacheState.empty)
+              if json.isBlank then ZIO.succeed(CacheState.empty)
               else
                 ZIO
                   .fromEither(decode[CacheState](json))

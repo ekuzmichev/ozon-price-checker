@@ -16,18 +16,12 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
   private implicit val _telegramClient: TelegramClient = telegramClient
 
   def processCommand(sourceId: SourceId, text: String): Task[Unit] =
-    if (text == OzonPriceCheckerBotCommands.Start)
-      processStartCommand(sourceId)
-    else if (text == OzonPriceCheckerBotCommands.Stop)
-      processStopCommand(sourceId)
-    else if (text == OzonPriceCheckerBotCommands.Cancel)
-      processCancelCommand(sourceId)
-    else if (text == OzonPriceCheckerBotCommands.WatchNewProduct)
-      processWatchNewProductCommand(sourceId)
-    else if (text == OzonPriceCheckerBotCommands.UnwatchAllProducts)
-      processUnwatchAllProductsCommand(sourceId)
-    else if (text == OzonPriceCheckerBotCommands.ShowAllProducts)
-      processShowAllProductsCommand(sourceId)
+    if text == OzonPriceCheckerBotCommands.Start then processStartCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.Stop then processStopCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.Cancel then processCancelCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.WatchNewProduct then processWatchNewProductCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.UnwatchAllProducts then processUnwatchAllProductsCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.ShowAllProducts then processShowAllProductsCommand(sourceId)
     else
       ZIO.log(s"Got unknown command $text") *>
         sendTextMessage(sourceId.chatId, s"I can not process command $text. Please send me a command known to me.")
@@ -36,34 +30,32 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
     initializeStoreEntry(sourceId)
       .flatMap(initialized =>
         val msg =
-          if (initialized)
-            "I have added you to the Store."
-          else
-            "You have been already added to the Store before."
+          if initialized then "I have added you to the Store."
+          else "You have been already added to the Store before."
         sendTextMessage(sourceId.chatId, msg)
       )
       .logged(s"process command ${OzonPriceCheckerBotCommands.Start} ")
 
   private def initializeStoreEntry(sourceId: SourceId): Task[Boolean] =
-    for {
+    for
       initialized <- productStore.checkInitialized(sourceId)
 
-      _ <- ZIO.log(s"Source ID is ${if (initialized) "already" else "not"} initialized in store")
+      _ <- ZIO.log(s"Source ID is ${if initialized then "already" else "not"} initialized in store")
 
       _ <- ZIO.when(!initialized) {
         productStore.emptyState(sourceId).logged(s"initialize store entry")
       }
-    } yield !initialized
+    yield !initialized
 
   private def processStopCommand(sourceId: SourceId): Task[Unit] =
-    (for {
+    (for
       initialized <- productStore.checkInitialized(sourceId)
       _           <- ZIO.when(initialized)(productStore.clearState(sourceId))
       msg =
-        if (initialized) "I have deleted you from the Store."
+        if initialized then "I have deleted you from the Store."
         else "You have been already removed from the Store before."
       _ <- sendTextMessage(sourceId.chatId, msg)
-    } yield ())
+    yield ())
       .logged(s"process command ${OzonPriceCheckerBotCommands.Stop} ")
 
   private def processCancelCommand(sourceId: SourceId): Task[Unit] =
@@ -75,15 +67,14 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
       )
 
   private def processWatchNewProductCommand(sourceId: SourceId): Task[Unit] =
-    (for {
+    (for
       initialized <- productStore.checkInitialized(sourceId)
       _ <-
-        if (initialized)
+        if initialized then
           sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.") *>
             productStore.updateProductCandidate(sourceId, WaitingProductId)
-        else
-          askToSendStartCommand(sourceId)
-    } yield ())
+        else askToSendStartCommand(sourceId)
+    yield ())
       .logged(s"process command ${OzonPriceCheckerBotCommands.WatchNewProduct}")
 
   private def processUnwatchAllProductsCommand(sourceId: SourceId): Task[Unit] =

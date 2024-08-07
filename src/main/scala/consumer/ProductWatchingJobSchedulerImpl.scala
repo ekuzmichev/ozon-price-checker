@@ -56,7 +56,7 @@ class ProductWatchingJobSchedulerImpl(
         }
       }
 
-  private def checkAndNotifyProductPrices(sourceId: SourceId, products: Seq[Product]) = {
+  private def checkAndNotifyProductPrices(sourceId: SourceId, products: Seq[Product]) =
     fetchProductInfos(products)
       .flatMap { (productInfos: Map[ProductId, ProductInfo]) =>
         val productPriceInfosReachedThreshold = products
@@ -77,7 +77,6 @@ class ProductWatchingJobSchedulerImpl(
           ) *>
           notifyProductsReachedThreshold(sourceId, productPriceInfosReachedThreshold)
       }
-  }
 
   private case class ProductPriceInfo(id: ProductId, currentPrice: Double, priceThreshold: Double)
 

@@ -9,7 +9,6 @@ import zio.{RLayer, ZIO, ZLayer}
 
 object TelegramClientLayers:
   val okHttp: RLayer[AppConfig, TelegramClient] = ZLayer.fromZIO {
-    for {
-      appConfig <- ZIO.service[AppConfig]
-    } yield new OkHttpTelegramClient(appConfig.botToken.value)
+    for appConfig <- ZIO.service[AppConfig]
+    yield new OkHttpTelegramClient(appConfig.botToken.value)
   }

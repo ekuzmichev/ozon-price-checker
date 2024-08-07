@@ -50,14 +50,14 @@ class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductSt
       sourceId: SourceId,
       updateSourceStateFn: SourceState => SourceState
   ): Task[Boolean] =
-    for {
+    for
       maybeSourceState <- readSourceState(sourceId)
       updated <- maybeSourceState match
         case Some(sourceState) =>
           val newSourceState = updateSourceStateFn(sourceState)
           productStateRef.update(_ + (sourceId -> newSourceState)).as(true)
         case None => ZIO.succeed(false)
-    } yield updated
+    yield updated
 
 object InMemoryProductStore:
   type ProductState = Map[SourceId, SourceState]

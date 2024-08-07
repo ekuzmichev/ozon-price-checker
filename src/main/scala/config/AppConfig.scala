@@ -1,15 +1,13 @@
 package ru.ekuzmichev
 package config
 
+import common.Sensitive
 import util.lang.NamedToString
 
 import scala.concurrent.duration.Duration
 
-case class Sensitive(value: String):
-  override def toString: String = s"***"
-
 case class AppConfig(
-    botToken: Sensitive,
+    botToken: Sensitive[String],
     priceCheckingCron: String,
     logBotStatusInterval: Duration,
     cacheStateFilePath: String

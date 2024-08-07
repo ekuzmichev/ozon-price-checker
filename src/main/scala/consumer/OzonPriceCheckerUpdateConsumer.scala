@@ -42,10 +42,8 @@ class OzonPriceCheckerUpdateConsumer(
         ZIO.log(s"Received: $message").zipRight {
           ZIO.when(message.hasText) {
             val text: String = message.getText
-            if (message.isCommand)
-              commandProcessor.processCommand(sourceId, text)
-            else
-              processText(sourceId, text)
+            if message.isCommand then commandProcessor.processCommand(sourceId, text)
+            else processText(sourceId, text)
           }
         }
       }
@@ -54,7 +52,7 @@ class OzonPriceCheckerUpdateConsumer(
   private def processText(sourceId: SourceId, text: ChatId): Task[Unit] =
     def sendDefaultMsg() = sendTextMessage(sourceId.chatId, "Send me a command known to me.")
 
-    for {
+    for
       _ <- ZIO.log(s"Got text '$text'")
 
       maybeSourceState <- productStore.readSourceState(sourceId)
@@ -74,8 +72,7 @@ class OzonPriceCheckerUpdateConsumer(
                 case WaitingPriceThreshold(productId, productPrice) =>
                   text.toIntOption match
                     case Some(priceThreshold) =>
-                      if (priceThreshold < productPrice)
-                        onPriceThreshold(sourceId, productId, priceThreshold)
+                      if priceThreshold < productPrice then onPriceThreshold(sourceId, productId, priceThreshold)
                       else
                         sendTextMessage(
                           sourceId.chatId,
@@ -88,7 +85,7 @@ class OzonPriceCheckerUpdateConsumer(
               sendDefaultMsg()
         case None =>
           sendDefaultMsg()
-    } yield ()
+    yield ()
 
   private def onProductId(sourceId: SourceId, productId: ProductId) =
     productStore.checkHasProductId(sourceId, productId).flatMap {

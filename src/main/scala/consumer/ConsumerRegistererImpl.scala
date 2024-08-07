@@ -1,7 +1,7 @@
 package ru.ekuzmichev
 package consumer
 
-import store.InMemoryProductStore
+import common.Sensitive
 import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
@@ -12,13 +12,12 @@ class ConsumerRegistererImpl extends ConsumerRegisterer:
   override def registerConsumer(
       botsApplication: TelegramBotsLongPollingApplication,
       longPollingUpdateConsumer: LongPollingUpdateConsumer,
-      token: String
+      token: Sensitive[String]
   ): Task[BotSession] =
-    for {
-      botSession <- ZIO
-        .attempt(botsApplication.registerBot(token, longPollingUpdateConsumer))
+    for botSession <- ZIO
+        .attempt(botsApplication.registerBot(token.value, longPollingUpdateConsumer))
         .logged(
           s"register updates consumer ${longPollingUpdateConsumer.getClass.getSimpleName}",
-          printResult = session => s"Session is ${if (session.isRunning) "" else "not "}running"
+          printResult = session => s"Session is ${if session.isRunning then "" else "not "}running"
         )
-    } yield botSession
+    yield botSession

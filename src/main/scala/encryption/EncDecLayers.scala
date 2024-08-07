@@ -6,8 +6,8 @@ import zio.{TaskLayer, ZIO, ZLayer}
 
 object EncDecLayers:
   def aes256(encryptionPassword: String): TaskLayer[EncDec] = ZLayer.fromZIO(
-    for {
+    for
       textEncryptor <- ZIO.attempt(new AES256TextEncryptor())
       _             <- ZIO.attempt(textEncryptor.setPassword(encryptionPassword))
-    } yield new JasyptEncDec(textEncryptor)
+    yield new JasyptEncDec(textEncryptor)
   )

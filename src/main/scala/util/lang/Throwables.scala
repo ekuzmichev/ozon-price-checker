@@ -12,9 +12,9 @@ object Throwables:
 
   def makeCauseSeqMessage(t: Throwable, printStackTrace: Boolean = false, abbreviate: Boolean = true): String =
     val rawCauseSeqMessage = causeChainOf(t).mkString(" caused by ")
-    val causeSeqMessage    = if (abbreviate) Strings.abbreviate(rawCauseSeqMessage) else rawCauseSeqMessage
+    val causeSeqMessage    = if abbreviate then Strings.abbreviate(rawCauseSeqMessage) else rawCauseSeqMessage
     val stackTraceMessage =
-      if (printStackTrace)
+      if printStackTrace then
         "\n\nStack Trace ==> \n\n" +
           t.getStackTrace.mkString("\t", "\n\t", "\t") +
           "\n\n <== End of Stack Trace\n\n"
@@ -25,7 +25,7 @@ object Throwables:
     @tailrec
     def loop(t: Throwable, chain: ArrayBuffer[Throwable]): ArrayBuffer[Throwable] =
       val cause = t.getCause
-      if (cause == null || chain.contains(cause)) chain
+      if cause == null || chain.contains(cause) then chain
       else loop(cause, chain :+ cause)
 
     loop(t, ArrayBuffer(t)).toList

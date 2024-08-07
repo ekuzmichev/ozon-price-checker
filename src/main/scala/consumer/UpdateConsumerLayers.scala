@@ -15,7 +15,7 @@ object UpdateConsumerLayers:
     LongPollingUpdateConsumer
   ] =
     ZLayer.fromZIO {
-      for {
+      for
         telegramClient              <- ZIO.service[TelegramClient]
         productStore                <- ZIO.service[ProductStore]
         productFetcher              <- ZIO.service[ProductFetcher]
@@ -23,8 +23,7 @@ object UpdateConsumerLayers:
         productIdParser             <- ZIO.service[ProductIdParser]
         commandProcessor            <- ZIO.service[CommandProcessor]
         runtime                     <- ZIO.runtime[Any]
-
-      } yield new OzonPriceCheckerUpdateConsumer(
+      yield new OzonPriceCheckerUpdateConsumer(
         telegramClient,
         productStore,
         productFetcher,

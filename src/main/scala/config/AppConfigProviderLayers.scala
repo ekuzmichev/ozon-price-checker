@@ -3,7 +3,11 @@ package config
 
 import encryption.EncDec
 
-import zio.{RLayer, ZLayer}
+import zio.{RLayer, ULayer, ZLayer}
 
 object AppConfigProviderLayers:
-  val impl: RLayer[EncDec, AppConfigProvider] = ZLayer.fromFunction(new AppConfigProviderImpl(_))
+  val impl: ULayer[AppConfigProvider] = ZLayer.succeed(new AppConfigProviderImpl)
+
+  val decryptingOverImpl: RLayer[EncDec, AppConfigProvider] =
+    ZLayer.environment[EncDec] ++ impl >>>
+      ZLayer.fromFunction(new DecryptingAppConfigProvider(_, _))

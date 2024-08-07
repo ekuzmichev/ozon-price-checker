@@ -19,14 +19,12 @@ class OzonProductIdParser extends ProductIdParser:
     Url.parseTry(s).toEither.leftMap(makeCauseSeqMessage(_))
 
   private def extractProductId(s: ProductId, url: Url): Either[String, ProductId] =
-    if (isOzonUrl(url))
+    if isOzonUrl(url) then
       takeProductIdFromPath(url.path) match
         case Some(productId) => Right(productId)
         case None            => Left(s"Not found product ID in URL path. URL: $url")
-    else if (url.hostOption.nonEmpty)
-      Left("URL has host other than *ozon.ru")
-    else
-      Right(s)
+    else if url.hostOption.nonEmpty then Left("URL has host other than *ozon.ru")
+    else Right(s)
 
   private def isOzonUrl(url: Url): Boolean =
     url.hostOption.map(_.value).exists(OzonHostRegex.matches)

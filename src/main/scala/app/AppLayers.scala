@@ -2,6 +2,7 @@ package ru.ekuzmichev
 package app
 
 import app.OzonPriceCheckerApp.getArgs
+import common.Sensitive
 import config.{AppConfig, AppConfigLayers}
 import consumer.*
 import encryption.EncDecLayers
@@ -13,36 +14,40 @@ import telegram.TelegramClientLayers
 import util.lang.Throwables.failure
 
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
-import zio.{RLayer, ZIO, ZIOAppArgs, ZLayer}
+import zio.{RLayer, Task, TaskLayer, URLayer, ZIO, ZIOAppArgs, ZLayer}
 
 object AppLayers:
-  private type ROut = AppConfig & LongPollingUpdateConsumer & ConsumerRegisterer & ProductWatchingJobScheduler &
-    ProductStore & CacheStateRepository
+  type OzonPriceCheckerAppROut =
+    AppConfig & LongPollingUpdateConsumer & ConsumerRegisterer & ProductWatchingJobScheduler & ProductStore &
+      CacheStateRepository
 
-  val ozonPriceCheckerAppLayer: RLayer[ZIOAppArgs, ROut] =
-    ZLayer
-      .fromZIO(
-        getArgs.flatMap(args =>
-          args.headOption match
-            case Some(encryptionPassword) => ZIO.succeed(encryptionPassword)
-            case None                     => ZIO.fail(failure(s"No encryption password provided"))
-        )
-      )
-      .flatMap { encryptionPasswordEnv =>
-        ZLayer.make[ROut](
-          AppConfigLayers.impl,
-          ConsumerRegistererLayers.impl,
-          UpdateConsumerLayers.ozonPriceChecker,
-          TelegramClientLayers.okHttp,
-          ProductStoreLayers.cachedOverInMemory,
-          ProductFetcherLayers.ozon,
-          ZioSchedulerLayers.impl,
-          BrowserLayers.jsoup,
-          JobIdGeneratorLayers.alphaNumeric,
-          ProductIdParserLayers.ozon,
-          CommandProcessorLayers.ozonPriceChecker,
-          EncDecLayers.aes256(encryptionPasswordEnv.get),
-          ProductWatchingJobSchedulerLayers.impl,
-          CacheStateRepositoryLayers.file
-        )
-      }
+  private def parseAppArgs(args: Seq[String]): Task[AppArgs] =
+    args.headOption match
+      case Some(encryptionPassword) =>
+        val appArgs = AppArgs(Sensitive(encryptionPassword))
+        ZIO.log(s"Parsed $appArgs").as(appArgs)
+      case None =>
+        ZIO.fail(failure(s"No encryption password provided"))
+
+  private val appArgsLayer: RLayer[ZIOAppArgs, AppArgs] = ZLayer.fromZIO(getArgs.flatMap(parseAppArgs))
+
+  val ozonPriceCheckerAppLayer: RLayer[ZIOAppArgs, OzonPriceCheckerAppROut] =
+    appArgsLayer.flatMap(appArgsEnv => makeOzonPriceCheckerLayer(appArgsEnv.get.encryptionPassword))
+
+  private def makeOzonPriceCheckerLayer(encryptionPassword: Sensitive[String]): TaskLayer[OzonPriceCheckerAppROut] =
+    ZLayer.make[OzonPriceCheckerAppROut](
+      AppConfigLayers.decryptingOverImpl,
+      ConsumerRegistererLayers.impl,
+      UpdateConsumerLayers.ozonPriceChecker,
+      TelegramClientLayers.okHttp,
+      ProductStoreLayers.cachedOverInMemory,
+      ProductFetcherLayers.ozon,
+      ZioSchedulerLayers.impl,
+      BrowserLayers.jsoup,
+      JobIdGeneratorLayers.alphaNumeric,
+      ProductIdParserLayers.ozon,
+      CommandProcessorLayers.ozonPriceChecker,
+      EncDecLayers.aes256(encryptionPassword.value),
+      ProductWatchingJobSchedulerLayers.impl,
+      CacheStateRepositoryLayers.file
+    )
