@@ -10,7 +10,7 @@ import util.telegram.MessageSendingUtils.sendTextMessage
 import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.meta.generics.TelegramClient
-import zio.{Fiber, LogAnnotation, Ref, Task, UIO, ZIO}
+import zio.{Fiber, LogAnnotation, Random, Ref, Task, UIO, URIO, ZIO}
 
 class ProductWatchingJobSchedulerImpl(
     telegramClient: TelegramClient,
@@ -98,8 +98,17 @@ class ProductWatchingJobSchedulerImpl(
 
   private def fetchProductInfos(products: Seq[Product]): Task[Map[ProductId, ProductInfo]] =
     ZIO
-      .foreach(products)(product => productFetcher.fetchProductInfo(product.id).map(product.id -> _))
+      .foreach(products) { product =>
+        sleepRandomTime
+          *>
+            productFetcher
+              .fetchProductInfo(product.id)
+              .map(product.id -> _)
+      }
       .map(_.toMap)
+
+  private def sleepRandomTime: UIO[Unit] =
+    Random.nextIntBetween(1, 10).flatMap(delayInSecs => ZIO.sleep(zio.Duration.fromSeconds(delayInSecs)))
 
   private def initNextTimeProvider(): ZIO[Any, Throwable, NextTimeProvider] =
     ZIO
