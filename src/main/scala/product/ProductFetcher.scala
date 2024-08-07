@@ -6,4 +6,4 @@ import common.ProductId
 import zio.Task
 
 trait ProductFetcher:
-  def fetchProductInfo(productId: ProductId): Task[ProductInfo]
+  def fetchProductInfo(productId: ProductId): Task[Option[ProductInfo]]

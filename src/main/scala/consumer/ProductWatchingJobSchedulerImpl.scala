@@ -10,7 +10,7 @@ import util.telegram.MessageSendingUtils.sendTextMessage
 import util.zio.ZioLoggingImplicits.Ops
 
 import org.telegram.telegrambots.meta.generics.TelegramClient
-import zio.{Fiber, LogAnnotation, Random, Ref, Task, UIO, URIO, ZIO}
+import zio.{Fiber, LogAnnotation, Random, Ref, Task, UIO, ZIO}
 
 class ProductWatchingJobSchedulerImpl(
     telegramClient: TelegramClient,
@@ -58,17 +58,17 @@ class ProductWatchingJobSchedulerImpl(
 
   private def checkAndNotifyProductPrices(sourceId: SourceId, products: Seq[Product]) =
     fetchProductInfos(products)
-      .flatMap { (productInfos: Map[ProductId, ProductInfo]) =>
+      .flatMap { (productInfos: Map[ProductId, Option[ProductInfo]]) =>
         val productPriceInfosReachedThreshold = products
           .map(product =>
             ProductPriceInfo(
               id = product.id,
-              currentPrice = productInfos.get(product.id).map(_.price).getOrElse(Double.NaN),
+              currentPrice = productInfos.get(product.id).flatMap(_.map(_.price)).getOrElse(Double.NaN),
               priceThreshold = product.priceThreshold
             )
           )
           .filter(productPriceInfo =>
-            productInfos.get(productPriceInfo.id).exists(_.price <= productPriceInfo.priceThreshold)
+            productInfos.get(productPriceInfo.id).exists(_.exists(_.price <= productPriceInfo.priceThreshold))
           )
 
         ZIO.when(products.isEmpty)(ZIO.log(s"Got 0 products")) *>
@@ -95,7 +95,7 @@ class ProductWatchingJobSchedulerImpl(
       )
     )
 
-  private def fetchProductInfos(products: Seq[Product]): Task[Map[ProductId, ProductInfo]] =
+  private def fetchProductInfos(products: Seq[Product]): Task[Map[ProductId, Option[ProductInfo]]] =
     ZIO
       .foreach(products) { product =>
         sleepRandomTime

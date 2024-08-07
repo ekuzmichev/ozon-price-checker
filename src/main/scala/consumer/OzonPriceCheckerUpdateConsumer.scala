@@ -99,19 +99,26 @@ class OzonPriceCheckerUpdateConsumer(
       case false =>
         productFetcher
           .fetchProductInfo(productId)
-          .tap(productInfo =>
-            sendTextMessage(
-              sourceId.chatId,
-              s"I have fetched product info from OZON for you:\n\n" +
-                s"ID: $productId\n" +
-                s"Name: ${productInfo.name}\n\n" +
-                s"Current Price: ${productInfo.price} ₽\n\n" +
-                s"Send me price threshold."
-            )
-          )
-          .flatMap(productInfo =>
-            productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId, productInfo.price))
-          )
+          .tap {
+            case Some(productInfo) =>
+              sendTextMessage(
+                sourceId.chatId,
+                s"I have fetched product info from OZON for you:\n\n" +
+                  s"ID: $productId\n" +
+                  s"Name: ${productInfo.name}\n\n" +
+                  s"Current Price: ${productInfo.price} ₽\n\n" +
+                  s"Send me price threshold."
+              ) *>
+                productStore.updateProductCandidate(sourceId, WaitingPriceThreshold(productId, productInfo.price))
+
+            case None =>
+              sendTextMessage(
+                sourceId.chatId,
+                s"I can not retrieve information about product with ID $productId.\n\n" +
+                  s"Send me another product ID or command ${OzonPriceCheckerBotCommands.Cancel}"
+              )
+          }
+
     }
 
   private def onPriceThreshold(sourceId: SourceId, productId: ProductId, priceThreshold: Int) =

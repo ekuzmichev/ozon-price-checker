@@ -2,7 +2,7 @@ package ru.ekuzmichev
 package product
 
 import common.ProductId
-import product.OzonProductFetcher.{OzonBaseUrl, ProductNameAsStringExtractor, RawPriceAsStringExtractor}
+import product.OzonProductFetcher.*
 
 import net.ruippeixotog.scalascraper.browser.Browser
 import net.ruippeixotog.scalascraper.dsl.DSL.*
@@ -15,15 +15,17 @@ import zio.{Task, ZIO}
 class OzonProductFetcher(browser: Browser) extends ProductFetcher:
   private type BrowserDocument = browser.DocumentType
 
-  override def fetchProductInfo(productId: ProductId): Task[ProductInfo] =
-    ZIO.attempt {
-      val productUrl: String            = makeProductUrl(productId)
-      val responseHtml: BrowserDocument = browser.get(productUrl)
-      val name: String                  = extractProductName(responseHtml)
-      val price: Double                 = extractPrice(responseHtml)
+  override def fetchProductInfo(productId: ProductId): Task[Option[ProductInfo]] =
+    ZIO
+      .attempt {
+        val productUrl: String            = makeProductUrl(productId)
+        val responseHtml: BrowserDocument = browser.get(productUrl)
+        val name: String                  = extractProductName(responseHtml)
+        val price: Double                 = extractPrice(responseHtml)
 
-      ProductInfo(name, price)
-    }
+        Some(ProductInfo(name, price))
+      }
+      .catchAll(t => ZIO.log(s"Unable to extract product info for product with ID: $productId") *> ZIO.none)
 
   private def extractProductName(responseHtml: BrowserDocument): String =
     (responseHtml >> ProductNameAsStringExtractor).trim()
