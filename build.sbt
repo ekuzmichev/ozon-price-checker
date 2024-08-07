@@ -31,6 +31,7 @@ lazy val root = (project in file("."))
       "org.typelevel"                 %% "cats-core"                % "2.12.0",
       "io.lemonlabs"                  %% "scala-uri"                % "4.0.3",
       "org.jasypt"                     % "jasypt"                   % "1.9.3",
+      "com.github.pathikrit"          %% "better-files"             % "3.9.2",
       "org.scalatest"                 %% "scalatest"                % "3.2.19" % Test,
       "dev.zio"                       %% "zio-test"                 % "2.1.6"  % Test,
       "com.stephenn"                  %% "scalatest-circe"          % "0.2.5"  % Test

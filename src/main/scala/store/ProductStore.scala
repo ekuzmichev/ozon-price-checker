@@ -5,9 +5,10 @@ import common.{ChatId, ProductId, UserName}
 import store.ProductStore.{ProductCandidate, SourceId, SourceState}
 import util.lang.NamedToString
 
-import zio.{Fiber, Task}
+import zio.Task
 
 trait ProductStore:
+  def preInitialize(sourceStatesBySourceId: Map[SourceId, SourceState]): Task[Unit]
   def checkInitialized(sourceId: SourceId): Task[Boolean]
   def checkHasProductId(sourceId: SourceId, productId: ProductId): Task[Boolean]
   def emptyState(sourceId: SourceId): Task[Unit]

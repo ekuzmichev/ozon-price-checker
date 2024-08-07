@@ -11,7 +11,8 @@ import util.zio.ZioLoggingImplicits.Ops
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{Task, ZIO}
 
-class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient) extends CommandProcessor:
+class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient)
+    extends CommandProcessor:
   private implicit val _telegramClient: TelegramClient = telegramClient
 
   def processCommand(sourceId: SourceId, text: String): Task[Unit] =
@@ -25,6 +26,8 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
       processWatchNewProductCommand(sourceId)
     else if (text == OzonPriceCheckerBotCommands.UnwatchAllProducts)
       processUnwatchAllProductsCommand(sourceId)
+    else if (text == OzonPriceCheckerBotCommands.ShowAllProducts)
+      processShowAllProductsCommand(sourceId)
     else
       ZIO.log(s"Got unknown command $text") *>
         sendTextMessage(sourceId.chatId, s"I can not process command $text. Please send me a command known to me.")
@@ -79,10 +82,7 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
           sendTextMessage(sourceId.chatId, "Send me OZON URL or product ID.") *>
             productStore.updateProductCandidate(sourceId, WaitingProductId)
         else
-          sendTextMessage(
-            sourceId.chatId,
-            s"You have not been yet initialized. Send me ${OzonPriceCheckerBotCommands.Start} command to fix it."
-          )
+          askToSendStartCommand(sourceId)
     } yield ())
       .logged(s"process command ${OzonPriceCheckerBotCommands.WatchNewProduct}")
 
@@ -91,3 +91,38 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
       .emptyState(sourceId)
       .zipRight(sendTextMessage(sourceId.chatId, "I have removed all watched products."))
       .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchAllProducts}")
+
+  private def processShowAllProductsCommand(sourceId: SourceId): Task[Unit] =
+    productStore
+      .readSourceState(sourceId)
+      .tap {
+        case Some(sourceState) =>
+          sourceState.products match
+            case Nil =>
+              sendTextMessage(
+                sourceId.chatId,
+                s"You have no watched products.\n\n" +
+                  s"To watch new product send me ${OzonPriceCheckerBotCommands.WatchNewProduct}"
+              )
+            case products =>
+              sendTextMessage(
+                sourceId.chatId,
+                s"Here are your watched products:\n\n" +
+                  s"${products.zipWithIndex
+                      .map { case (product, index) =>
+                        s"${index + 1}) ${product.id}\n\t" +
+                          s"Price threshold: ${product.priceThreshold} ₽"
+                      }
+                      .mkString("\n")}"
+              )
+        case None =>
+          askToSendStartCommand(sourceId)
+      }
+      .logged(s"process command ${OzonPriceCheckerBotCommands.ShowAllProducts}")
+      .unit
+
+  private def askToSendStartCommand(sourceId: SourceId) =
+    sendTextMessage(
+      sourceId.chatId,
+      s"You have not been yet initialized. Send me ${OzonPriceCheckerBotCommands.Start} command to fix it."
+    )

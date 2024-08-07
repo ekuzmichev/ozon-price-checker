@@ -8,7 +8,7 @@ import encryption.EncDecLayers
 import product.{ProductFetcherLayers, ProductIdParserLayers}
 import scalascraper.BrowserLayers
 import schedule.{JobIdGeneratorLayers, ZioSchedulerLayers}
-import store.ProductStoreLayers
+import store.{CacheStateRepository, CacheStateRepositoryLayers, ProductStore, ProductStoreLayers}
 import telegram.TelegramClientLayers
 import util.lang.Throwables.failure
 
@@ -16,7 +16,8 @@ import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsume
 import zio.{RLayer, ZIO, ZIOAppArgs, ZLayer}
 
 object AppLayers:
-  private type ROut = AppConfig & LongPollingUpdateConsumer & ConsumerRegisterer & ProductWatchingJobScheduler
+  private type ROut = AppConfig & LongPollingUpdateConsumer & ConsumerRegisterer & ProductWatchingJobScheduler &
+    ProductStore & CacheStateRepository
 
   val ozonPriceCheckerAppLayer: RLayer[ZIOAppArgs, ROut] =
     ZLayer
@@ -33,7 +34,7 @@ object AppLayers:
           ConsumerRegistererLayers.impl,
           UpdateConsumerLayers.ozonPriceChecker,
           TelegramClientLayers.okHttp,
-          ProductStoreLayers.inMemory,
+          ProductStoreLayers.cachedOverInMemory,
           ProductFetcherLayers.ozon,
           ZioSchedulerLayers.impl,
           BrowserLayers.jsoup,
@@ -41,6 +42,7 @@ object AppLayers:
           ProductIdParserLayers.ozon,
           CommandProcessorLayers.ozonPriceChecker,
           EncDecLayers.aes256(encryptionPasswordEnv.get),
-          ProductWatchingJobSchedulerLayers.impl
+          ProductWatchingJobSchedulerLayers.impl,
+          CacheStateRepositoryLayers.file
         )
       }

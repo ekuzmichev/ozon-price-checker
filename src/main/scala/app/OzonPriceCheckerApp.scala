@@ -3,6 +3,8 @@ package app
 
 import config.AppConfig
 import consumer.*
+import store.ProductStore.{SourceId, SourceState}
+import store.{CacheState, CacheStateRepository, ProductStore}
 import telegram.BotsApplicationScopes
 import util.lang.Throwables.makeCauseSeqMessage
 import util.zio.ZioClock.getCurrentDateTime
@@ -20,8 +22,11 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       .catchAll(t => ZIO.fail(s"Got error while running ${this.getClass.getSimpleName}: $makeCauseSeqMessage(t)"))
       .provideLayer(AppLayers.ozonPriceCheckerAppLayer)
 
-  private def runBot()
-      : RIO[LongPollingUpdateConsumer with ConsumerRegisterer with AppConfig with ProductWatchingJobScheduler, Unit] =
+  private def runBot(): RIO[
+    LongPollingUpdateConsumer & ConsumerRegisterer & AppConfig & ProductWatchingJobScheduler & ProductStore &
+      CacheStateRepository,
+    Unit
+  ] =
     ZIO.scoped {
       for {
         startDateTime   <- getCurrentDateTime
@@ -31,11 +36,25 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
         consumerRegisterer          <- ZIO.service[ConsumerRegisterer]
         appConfig                   <- ZIO.service[AppConfig]
         productWatchingJobScheduler <- ZIO.service[ProductWatchingJobScheduler]
+        productStore                <- ZIO.service[ProductStore]
+        cacheStateRepository        <- ZIO.service[CacheStateRepository]
 
         _ <- consumerRegisterer.registerConsumer(botsApplication, longPollingUpdateConsumer, appConfig.botToken.value)
 
         _ <- productWatchingJobScheduler.scheduleProductsWatching()
 
+        cacheState <- cacheStateRepository.read()
+        _ <- ZIO.when(cacheState.entries.nonEmpty)(
+          productStore
+            .preInitialize(toSourceStatesBySourceId(cacheState))
+            .zipLeft(ZIO.log(s"Pre-initialized product store with $cacheState"))
+        )
+
         _ <- Schedulers.scheduleBotStatusLogging(startDateTime, appConfig.logBotStatusInterval)
       } yield ()
     }
+
+  private def toSourceStatesBySourceId(cacheState: CacheState): Map[SourceId, SourceState] =
+    cacheState.entries
+      .map(entry => SourceId(entry.userName, entry.chatId) -> SourceState(products = entry.products, None))
+      .toMap

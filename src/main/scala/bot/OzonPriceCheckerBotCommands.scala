@@ -7,3 +7,4 @@ object OzonPriceCheckerBotCommands:
   val Stop               = "/stop"
   val WatchNewProduct    = "/watchnewproduct"
   val UnwatchAllProducts = "/unwatchallproducts"
+  val ShowAllProducts    = "/showallproducts"

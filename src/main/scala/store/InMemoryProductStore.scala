@@ -5,9 +5,12 @@ import common.ProductId
 import store.InMemoryProductStore.ProductState
 import store.ProductStore.{Product, ProductCandidate, SourceId, SourceState}
 
-import zio.{Fiber, Ref, Task, ZIO}
+import zio.{Ref, Task, ZIO}
 
 class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductStore:
+  override def preInitialize(sourceStatesBySourceId: Map[SourceId, SourceState]): Task[Unit] =
+    productStateRef.set(sourceStatesBySourceId)
+
   override def checkInitialized(sourceId: SourceId): Task[Boolean] =
     productStateRef.get.map(_.contains(sourceId))
 
