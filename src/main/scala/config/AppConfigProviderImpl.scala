@@ -5,10 +5,11 @@ import config.AppConfigProviderImpl.makeAppConfigZioConfig
 import config.TypeSafeConfigProviders.makeFromResourceFile
 import encryption.EncDec
 
+import cron4s.Cron
 import zio.Config.*
 import zio.config.*
 import zio.config.magnolia.*
-import zio.{Config, Task}
+import zio.{Config, IO, Task, ZIO}
 
 class AppConfigProviderImpl(encDec: EncDec) extends AppConfigProvider:
   override def provideAppConfig(): Task[AppConfig] =
@@ -19,6 +20,10 @@ class AppConfigProviderImpl(encDec: EncDec) extends AppConfigProvider:
           .decrypt(rawAppConfig.botToken.value)
           .map(decryptedBotTokenValue => rawAppConfig.copy(botToken = Sensitive.apply(decryptedBotTokenValue)))
       )
+      .tap(appConfig => validateCron(appConfig.priceCheckingCron))
+
+  private def validateCron(cron: String): IO[cron4s.Error, Unit] =
+    ZIO.fromEither(Cron(cron)).tapError(error => ZIO.logError(s"Failed to validate cron $cron: $error")).unit
 
   private def makeConfigProvider() =
     for {
