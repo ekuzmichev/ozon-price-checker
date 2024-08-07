@@ -127,13 +127,6 @@ class OzonPriceCheckerUpdateConsumer(
         s"To watch new product send me ${OzonPriceCheckerBotCommands.WatchNewProduct}"
     ) *>
       productStore.resetProductCandidate(sourceId) *>
-      productStore.addProduct(sourceId, Product(productId, priceThreshold)) *>
-      hasFirstProductAdded(sourceId)
-        .tap(ZIO.when(_)(productWatchingJobScheduler.scheduleProductsWatching(sourceId)))
-
-  private def hasFirstProductAdded(sourceId: SourceId) =
-    productStore
-      .readSourceState(sourceId)
-      .map(_.exists(_.products.size == 1))
+      productStore.addProduct(sourceId, Product(productId, priceThreshold))
 
 end OzonPriceCheckerUpdateConsumer

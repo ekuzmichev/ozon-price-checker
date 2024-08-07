@@ -12,25 +12,15 @@ class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductSt
     productStateRef.get.map(_.contains(sourceId))
 
   override def emptyState(sourceId: SourceId): Task[Unit] =
-    getAllFiberRuntimes(sourceId).flatMap(fiberRuntimes =>
-      ZIO.foreachDiscard(fiberRuntimes)(fiberRuntime =>
-        fiberRuntime.interrupt.tap(exit =>
-          ZIO.log(s"Fiber ${fiberRuntime.id} has been interrupted with exit code $exit")
-        )
-      )
-    ) *>
-      productStateRef.update(_ + (sourceId -> SourceState.empty))
-
-  private def getAllFiberRuntimes(sourceId: SourceId): Task[Seq[Fiber.Runtime[Any, Unit]]] =
-    productStateRef.get
-      .map(_.get(sourceId).collect { case SourceState(_, _, Some(fiberRuntime)) => fiberRuntime })
-      .map(_.fold(Seq.empty)(Seq.apply(_)))
+    productStateRef.update(_ + (sourceId -> SourceState.empty))
 
   override def clearState(sourceId: SourceId): Task[Unit] =
     productStateRef.update(_ - sourceId)
 
   override def readSourceState(sourceId: SourceId): Task[Option[SourceState]] =
     productStateRef.get.map(_.get(sourceId))
+
+  override def readAll(): Task[Map[SourceId, SourceState]] = productStateRef.get
 
   override def updateProductCandidate(
       sourceId: SourceId,
@@ -46,9 +36,6 @@ class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductSt
 
   override def checkHasProductId(sourceId: SourceId, productId: ProductId): Task[Boolean] =
     productStateRef.get.map(_.get(sourceId).exists(_.products.exists(_.id == productId)))
-
-  override def addScheduleFiberRuntime(sourceId: SourceId, fiberRuntime: Fiber.Runtime[Any, Unit]): Task[Boolean] =
-    doUpdate(sourceId, sourceState => sourceState.copy(maybeScheduleFiberRuntime = Some(fiberRuntime)))
 
   private def doUpdateProductCandidate(
       sourceId: SourceId,

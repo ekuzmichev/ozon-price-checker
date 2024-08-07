@@ -16,7 +16,9 @@ import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsume
 import zio.{RLayer, ZIO, ZIOAppArgs, ZLayer}
 
 object AppLayers:
-  val ozonPriceCheckerAppLayer: RLayer[ZIOAppArgs, AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer] =
+  private type ROut = AppConfig & LongPollingUpdateConsumer & ConsumerRegisterer & ProductWatchingJobScheduler
+
+  val ozonPriceCheckerAppLayer: RLayer[ZIOAppArgs, ROut] =
     ZLayer
       .fromZIO(
         getArgs.flatMap(args =>
@@ -26,7 +28,7 @@ object AppLayers:
         )
       )
       .flatMap { encryptionPasswordEnv =>
-        ZLayer.make[AppConfig with LongPollingUpdateConsumer with ConsumerRegisterer](
+        ZLayer.make[ROut](
           AppConfigLayers.impl,
           ConsumerRegistererLayers.impl,
           UpdateConsumerLayers.ozonPriceChecker,

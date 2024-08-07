@@ -13,10 +13,10 @@ trait ProductStore:
   def emptyState(sourceId: SourceId): Task[Unit]
   def clearState(sourceId: SourceId): Task[Unit]
   def readSourceState(sourceId: SourceId): Task[Option[SourceState]]
+  def readAll(): Task[Map[SourceId, SourceState]]
   def updateProductCandidate(sourceId: SourceId, productCandidate: ProductCandidate): Task[Boolean]
   def resetProductCandidate(sourceId: SourceId): Task[Boolean]
   def addProduct(sourceId: SourceId, product: ProductStore.Product): Task[Boolean]
-  def addScheduleFiberRuntime(sourceId: SourceId, fiberRuntime: Fiber.Runtime[Any, Unit]): Task[Boolean]
 
 object ProductStore:
   case class SourceId(userName: UserName, chatId: ChatId) extends NamedToString
@@ -31,11 +31,7 @@ object ProductStore:
         extends ProductCandidate
         with NamedToString
 
-  case class SourceState(
-      products: Seq[Product],
-      maybeProductCandidate: Option[ProductCandidate],
-      maybeScheduleFiberRuntime: Option[Fiber.Runtime[Any, Unit]]
-  ) extends NamedToString
+  case class SourceState(products: Seq[Product], maybeProductCandidate: Option[ProductCandidate]) extends NamedToString
 
   object SourceState:
-    def empty: SourceState = SourceState(Seq.empty, None, None)
+    def empty: SourceState = SourceState(Seq.empty, None)

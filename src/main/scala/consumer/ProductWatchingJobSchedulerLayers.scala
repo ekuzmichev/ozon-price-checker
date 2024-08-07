@@ -7,7 +7,7 @@ import schedule.ZioScheduler
 import store.ProductStore
 
 import org.telegram.telegrambots.meta.generics.TelegramClient
-import zio.{URLayer, ZIO, ZLayer}
+import zio.{Fiber, Ref, URLayer, ZIO, ZLayer}
 
 object ProductWatchingJobSchedulerLayers:
   val impl: URLayer[
@@ -16,16 +16,18 @@ object ProductWatchingJobSchedulerLayers:
   ] =
     ZLayer.fromZIO(
       for {
-        telegramClient <- ZIO.service[TelegramClient]
-        productStore   <- ZIO.service[ProductStore]
-        productFetcher <- ZIO.service[ProductFetcher]
-        zioScheduler   <- ZIO.service[ZioScheduler]
-        appConfig      <- ZIO.service[AppConfig]
+        telegramClient          <- ZIO.service[TelegramClient]
+        productStore            <- ZIO.service[ProductStore]
+        productFetcher          <- ZIO.service[ProductFetcher]
+        zioScheduler            <- ZIO.service[ZioScheduler]
+        appConfig               <- ZIO.service[AppConfig]
+        scheduleFiberRuntimeRef <- Ref.make[Option[Fiber.Runtime[Any, Unit]]](None)
       } yield new ProductWatchingJobSchedulerImpl(
         telegramClient,
         productStore,
         productFetcher,
         zioScheduler,
-        appConfig.priceCheckingCron
+        appConfig.priceCheckingCron,
+        scheduleFiberRuntimeRef
       )
     )

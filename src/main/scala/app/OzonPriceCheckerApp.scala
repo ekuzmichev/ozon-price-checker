@@ -20,17 +20,21 @@ object OzonPriceCheckerApp extends ZIOAppDefault:
       .catchAll(t => ZIO.fail(s"Got error while running ${this.getClass.getSimpleName}: $makeCauseSeqMessage(t)"))
       .provideLayer(AppLayers.ozonPriceCheckerAppLayer)
 
-  private def runBot(): RIO[LongPollingUpdateConsumer with ConsumerRegisterer with AppConfig, Unit] =
+  private def runBot()
+      : RIO[LongPollingUpdateConsumer with ConsumerRegisterer with AppConfig with ProductWatchingJobScheduler, Unit] =
     ZIO.scoped {
       for {
         startDateTime   <- getCurrentDateTime
         botsApplication <- BotsApplicationScopes.makeLongPollingBotsApplication()
 
-        longPollingUpdateConsumer <- ZIO.service[LongPollingUpdateConsumer]
-        consumerRegisterer        <- ZIO.service[ConsumerRegisterer]
-        appConfig                 <- ZIO.service[AppConfig]
+        longPollingUpdateConsumer   <- ZIO.service[LongPollingUpdateConsumer]
+        consumerRegisterer          <- ZIO.service[ConsumerRegisterer]
+        appConfig                   <- ZIO.service[AppConfig]
+        productWatchingJobScheduler <- ZIO.service[ProductWatchingJobScheduler]
 
         _ <- consumerRegisterer.registerConsumer(botsApplication, longPollingUpdateConsumer, appConfig.botToken.value)
+
+        _ <- productWatchingJobScheduler.scheduleProductsWatching()
 
         _ <- Schedulers.scheduleBotStatusLogging(startDateTime, appConfig.logBotStatusInterval)
       } yield ()
