@@ -11,6 +11,8 @@ import zio.config.*
 import zio.config.magnolia.*
 import zio.{Config, IO, Task, ZIO}
 
+import scala.concurrent.duration.Duration
+
 class AppConfigProviderImpl(encDec: EncDec) extends AppConfigProvider:
   override def provideAppConfig(): Task[AppConfig] =
     makeConfigProvider()
@@ -35,5 +37,8 @@ object AppConfigProviderImpl:
   private def makeAppConfigZioConfig(encDec: EncDec): Config[AppConfig] =
     implicit val sensitiveDeriveConfig: DeriveConfig[Sensitive] =
       DeriveConfig[String].map(Sensitive.apply)
+    
+    implicit val durationDeriveConfig: DeriveConfig[Duration] =
+      DeriveConfig[String].map(Duration.apply)
 
     deriveConfig[AppConfig].toKebabCase
