@@ -1,5 +1,6 @@
 package ru.ekuzmichev
 package store
+import encryption.EncDec
 import util.lang.Throwables.failure
 
 import better.files.{File as ScalaFile, *}
@@ -7,7 +8,7 @@ import io.circe.parser.decode
 import io.circe.syntax.*
 import zio.{Task, ZIO}
 
-class FileCacheStateRepository(filePath: String) extends CacheStateRepository:
+class FileCacheStateRepository(filePath: String, encDec: EncDec) extends CacheStateRepository:
   override def read(): Task[CacheState] =
     ZIO
       .attempt(asScalaFile)
@@ -15,6 +16,7 @@ class FileCacheStateRepository(filePath: String) extends CacheStateRepository:
         if file.exists then
           ZIO
             .attempt(file.contentAsString)
+            .flatMap(encDec.decrypt)
             .flatMap(json =>
               if json.isBlank then ZIO.succeed(CacheState.empty)
               else
@@ -26,6 +28,6 @@ class FileCacheStateRepository(filePath: String) extends CacheStateRepository:
       )
 
   override def replace(cacheState: CacheState): Task[Unit] =
-    ZIO.attempt(asScalaFile.overwrite(cacheState.asJson.spaces2))
+    encDec.encrypt(cacheState.asJson.spaces2).flatMap(content => ZIO.attempt(asScalaFile.overwrite(content)))
 
   private def asScalaFile: ScalaFile = ScalaFile(filePath)

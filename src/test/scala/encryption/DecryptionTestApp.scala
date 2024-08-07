@@ -16,3 +16,4 @@ object DecryptionTestApp extends ZIOAppDefault:
     } yield ()).provideLayer(
       ZLayer.fromZIO(Console.readLine("Encryption password: ")).flatMap(env => EncDecLayers.aes256(env.get))
     )
+    
