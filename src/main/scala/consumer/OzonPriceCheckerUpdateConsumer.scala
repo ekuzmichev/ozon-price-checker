@@ -100,8 +100,8 @@ class OzonPriceCheckerUpdateConsumer(
               s"Send me another product ID or command ${OzonPriceCheckerBotCommands.Cancel}"
           )
       case false =>
-        ZIO
-          .attempt(productFetcher.fetchProductInfo(productId))
+        productFetcher
+          .fetchProductInfo(productId)
           .tap(productInfo =>
             sendTextMessage(
               sourceId.chatId,

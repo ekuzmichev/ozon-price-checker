@@ -48,7 +48,7 @@ class ProductWatchingJobSchedulerImpl(
       .readAll()
       .tap(sourceStatesBySourceId => ZIO.log(s"Read ${sourceStatesBySourceId.size} source ids"))
       .flatMap { (sourceStatesBySourceId: Map[SourceId, SourceState]) =>
-        ZIO.foreachDiscard(sourceStatesBySourceId) { case (sourceId, sourceState) =>
+        ZIO.foreachParDiscard(sourceStatesBySourceId) { case (sourceId, sourceState) =>
           ZIO
             .logAnnotate(LogAnnotation("userName", sourceId.userName), LogAnnotation("chatId", sourceId.chatId)) {
               checkAndNotifyProductPrices(sourceId, sourceState.products)
@@ -98,7 +98,7 @@ class ProductWatchingJobSchedulerImpl(
 
   private def fetchProductInfos(products: Seq[Product]): Task[Map[ProductId, ProductInfo]] =
     ZIO
-      .foreach(products)(product => ZIO.attempt(product.id -> productFetcher.fetchProductInfo(product.id)))
+      .foreach(products)(product => productFetcher.fetchProductInfo(product.id).map(product.id -> _))
       .map(_.toMap)
 
   private def initNextTimeProvider(): ZIO[Any, Throwable, NextTimeProvider] =
