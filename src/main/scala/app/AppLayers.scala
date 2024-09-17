@@ -12,6 +12,7 @@ import schedule.{JobIdGeneratorLayers, ZioSchedulerLayers}
 import store.{CacheStateRepository, CacheStateRepositoryLayers, ProductStore, ProductStoreLayers}
 import telegram.TelegramClientLayers
 import util.lang.Throwables.failure
+import util.ozon.OzonShortUrlResolverLayers
 
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
 import zio.{RLayer, Task, TaskLayer, URLayer, ZIO, ZIOAppArgs, ZLayer}
@@ -46,6 +47,7 @@ object AppLayers:
       BrowserLayers.jsoup,
       JobIdGeneratorLayers.alphaNumeric,
       ProductIdParserLayers.ozon,
+      OzonShortUrlResolverLayers.impl,
       CommandProcessorLayers.ozonPriceChecker,
       EncDecLayers.aes256(encryptionPassword.value),
       ProductWatchingJobSchedulerLayers.impl,

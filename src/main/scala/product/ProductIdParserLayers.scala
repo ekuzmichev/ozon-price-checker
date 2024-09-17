@@ -1,7 +1,9 @@
 package ru.ekuzmichev
 package product
 
-import zio.{ULayer, ZLayer}
+import util.ozon.OzonShortUrlResolver
+
+import zio.{RLayer, ZLayer}
 
 object ProductIdParserLayers:
-  val ozon: ULayer[ProductIdParser] = ZLayer.succeed(new OzonProductIdParser)
+  val ozon: RLayer[OzonShortUrlResolver, ProductIdParser] = ZLayer.fromFunction(new OzonProductIdParser(_))

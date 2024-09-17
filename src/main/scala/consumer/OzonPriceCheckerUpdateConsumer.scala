@@ -63,12 +63,13 @@ class OzonPriceCheckerUpdateConsumer(
             case Some(productCandidate) =>
               productCandidate match
                 case WaitingProductId =>
-                  productIdParser.parse(text) match
+                  productIdParser.parse(text).flatMap {
                     case Right(productId) =>
                       onProductId(sourceId, productId)
                     case Left(error) =>
                       ZIO.log(s"Failed to parse productId from text '$text'. Cause: $error") *>
                         sendTextMessage(sourceId.chatId, s"Send me valid URL or product ID")
+                  }
                 case WaitingPriceThreshold(productId, productPrice) =>
                   text.toIntOption match
                     case Some(priceThreshold) =>

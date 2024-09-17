@@ -2,21 +2,40 @@ package ru.ekuzmichev
 package product
 
 import common.ProductId
-import product.OzonProductIdParser.OzonHostRegex
-import util.lang.Throwables
-import util.lang.Throwables.makeCauseSeqMessage
+import product.OzonProductIdParser.{OzonHostRegex, OzonProductUrlPathPart, OzonShortUrlPathPart}
+import util.ozon.OzonShortUrlResolver
+import util.uri.UrlExtractionUtils
 
-import cats.syntax.either.*
 import io.lemonlabs.uri.{Url, UrlPath}
+import zio.{Task, ZIO}
 
 import scala.util.matching.Regex
 
-class OzonProductIdParser extends ProductIdParser:
-  override def parse(s: String): Either[String, ProductId] =
-    parseUrlEither(s).flatMap(extractProductId(s, _))
+class OzonProductIdParser(ozonShortUrlResolver: OzonShortUrlResolver) extends ProductIdParser:
+  override def parse(s: String): Task[Either[String, ProductId]] =
+    UrlExtractionUtils.extractUrl(s).flatMap {
+      case Some(url) =>
+        if isOzonUrl(url) then
+          if isShortOzonUrl(url) then
+            ozonShortUrlResolver
+              .resolveShortUrl(url)
+              .flatMap(extractProductId)
+          else extractProductId(url)
+        else ZIO.left(s"URL $url contains host other than *ozon.ru")
+      case None =>
+        ZIO.logDebug(s"Returning $s as product id") *> ZIO.right(s)
+    }
 
-  private def parseUrlEither(s: String): Either[String, Url] =
-    Url.parseTry(s).toEither.leftMap(makeCauseSeqMessage(_))
+  private def extractProductId(url: Url) =
+    if isProductUrl(url) then
+      takeProductIdFromPath(url.path) match
+        case Some(productId) => ZIO.right(productId)
+        case None            => ZIO.left(s"Not found product ID in URL path. URL: $url")
+    else ZIO.left(s"URL $url is not product OZON URL")
+
+  private def isShortOzonUrl(url: Url): Boolean = url.path.parts.contains(OzonShortUrlPathPart)
+
+  private def isProductUrl(url: Url) = url.path.parts.contains(OzonProductUrlPathPart)
 
   private def extractProductId(s: ProductId, url: Url): Either[String, ProductId] =
     if isOzonUrl(url) then
@@ -33,4 +52,6 @@ class OzonProductIdParser extends ProductIdParser:
     urlPath.parts.drop(1).filter(!_.isBlank).headOption
 
 object OzonProductIdParser:
-  val OzonHostRegex: Regex = ".*ozon.ru".r
+  val OzonHostRegex: Regex           = ".*ozon.ru".r
+  val OzonShortUrlPathPart: String   = "t"
+  val OzonProductUrlPathPart: String = "product"

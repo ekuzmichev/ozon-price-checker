@@ -4,9 +4,9 @@ package util.uri
 import io.lemonlabs.uri.{QueryString, Url}
 import zio.test.{Spec, ZIOSpecDefault, assertTrue}
 
-object UrlExtractionUtilsSpec extends ZIOSpecDefault:
+object UrlExtractionUtilsTest extends ZIOSpecDefault:
   def spec: Spec[Any, Throwable] =
-    suite("UrlExtractionUtilsSpec.extractUrl")(
+    suite("UrlExtractionUtils.extractUrl")(
       test("should extract URL from text containing it") {
         for maybeUrl <- UrlExtractionUtils.extractUrl(
             s"Коврик Самонадувающийся Naturehike Yugu Ultralight Automatic Inflatable Cushion Mummy Blue (Б/Р) https://ozon.ru/t/YKknAE4"

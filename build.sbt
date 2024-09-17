@@ -14,6 +14,8 @@ ThisBuild / assemblyMergeStrategy := {
   case x                                     => MergeStrategy.defaultMergeStrategy(x)
 }
 
+ThisBuild / Test / testOptions += Tests.Filter(s => !s.endsWith("IntegrationTest"))
+
 lazy val root = (project in file("."))
   .settings(
     name                                          := "ozon-price-checker",
@@ -33,8 +35,8 @@ lazy val root = (project in file("."))
       "org.jasypt"                     % "jasypt"                   % "1.9.3",
       "com.github.pathikrit"          %% "better-files"             % "3.9.2",
       "org.scalatest"                 %% "scalatest"                % "3.2.19" % Test,
-      "dev.zio"                       %% "zio-test"                 % "2.1.6"  % Test,
-      "dev.zio"                       %% "zio-test-sbt"             % "2.1.6"  % Test,
+      "dev.zio"                       %% "zio-test"                 % "2.1.9"  % Test,
+      "dev.zio"                       %% "zio-test-sbt"             % "2.1.9"  % Test,
       "com.stephenn"                  %% "scalatest-circe"          % "0.2.5"  % Test
     ) ++
       Seq(
