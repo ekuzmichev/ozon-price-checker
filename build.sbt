@@ -35,13 +35,13 @@ lazy val root = (project in file("."))
       "org.scalatest"                 %% "scalatest"                % "3.2.19" % Test,
       "dev.zio"                       %% "zio-test"                 % "2.1.6"  % Test,
       "com.stephenn"                  %% "scalatest-circe"          % "0.2.5"  % Test
-    )
-      ++ Seq(
+    ) ++
+      Seq(
         "dev.zio" %% "zio-config",
         "dev.zio" %% "zio-config-magnolia",
         "dev.zio" %% "zio-config-typesafe"
-      ).map(_ % zioVersion)
-      ++ Seq(
+      ).map(_ % zioVersion) ++
+      Seq(
         "io.circe" %% "circe-core",
         "io.circe" %% "circe-generic",
         "io.circe" %% "circe-parser"
