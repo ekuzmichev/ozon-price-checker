@@ -34,6 +34,7 @@ lazy val root = (project in file("."))
       "com.github.pathikrit"          %% "better-files"             % "3.9.2",
       "org.scalatest"                 %% "scalatest"                % "3.2.19" % Test,
       "dev.zio"                       %% "zio-test"                 % "2.1.6"  % Test,
+      "dev.zio"                       %% "zio-test-sbt"             % "2.1.6"  % Test,
       "com.stephenn"                  %% "scalatest-circe"          % "0.2.5"  % Test
     ) ++
       Seq(
