@@ -4,11 +4,12 @@ package product
 import util.ozon.OzonShortUrlResolverImpl
 
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
+import zio.Scope
 import zio.test.*
 import zio.test.Assertion.*
 
 object OzonProductIdParserIntegrationTest extends ZIOSpecDefault:
-  def spec: Spec[Any, Throwable] =
+  override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("OzonProductIdParser.parse")(
       test("parse Ozon product id from Ozon URL 'shared' from browser") {
         val parser = makeProductIdParser

@@ -2,10 +2,11 @@ package ru.ekuzmichev
 package util.uri
 
 import io.lemonlabs.uri.{QueryString, Url}
-import zio.test.{Spec, ZIOSpecDefault, assertTrue}
+import zio.Scope
+import zio.test.{Spec, TestEnvironment, ZIOSpecDefault, assertTrue}
 
 object UrlExtractionUtilsTest extends ZIOSpecDefault:
-  def spec: Spec[Any, Throwable] =
+  override def spec: Spec[TestEnvironment & Scope, Any] =
     suite("UrlExtractionUtils.extractUrl")(
       test("should extract URL from text containing it") {
         for maybeUrl <- UrlExtractionUtils.extractUrl(

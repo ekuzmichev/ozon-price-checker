@@ -55,3 +55,8 @@ class CacheProductStore(decoratee: ProductStore, cacheStateRepository: CacheStat
 
   override def addProduct(sourceId: SourceId, product: Product): Task[Boolean] =
     decoratee.addProduct(sourceId, product) <* replaceStateInCache()
+
+  override def removeProduct(sourceId: SourceId, productId: ProductId): Task[Boolean] =
+    decoratee.removeProduct(sourceId, productId) <* replaceStateInCache()
+    
+  

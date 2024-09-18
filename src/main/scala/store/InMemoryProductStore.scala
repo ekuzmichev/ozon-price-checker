@@ -40,6 +40,9 @@ class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductSt
   override def checkHasProductId(sourceId: SourceId, productId: ProductId): Task[Boolean] =
     productStateRef.get.map(_.get(sourceId).exists(_.products.exists(_.id == productId)))
 
+  override def removeProduct(sourceId: SourceId, productId: ProductId): Task[Boolean] =
+    doUpdate(sourceId, sourceState => sourceState.copy(products = sourceState.products.filter(_.id != productId)))
+
   private def doUpdateProductCandidate(
       sourceId: SourceId,
       maybeProductCandidate: Option[ProductCandidate]
