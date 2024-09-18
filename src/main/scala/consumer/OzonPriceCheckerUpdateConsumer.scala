@@ -1,16 +1,20 @@
 package ru.ekuzmichev
 package consumer
 
-import bot.OzonPriceCheckerBotCommands
+import bot.CallbackData.DeleteProduct
+import bot.{CallbackData, OzonPriceCheckerBotCommands}
 import common.{ChatId, ProductId, UserName}
 import product.{ProductFetcher, ProductIdParser}
 import store.*
 import store.ProductStore.ProductCandidate.*
 import store.ProductStore.{Product, ProductCandidate, SourceId}
+import util.lang.Throwables
 import util.telegram.MessageSendingUtils.sendTextMessage
 
-import org.telegram.telegrambots.meta.api.objects.{CallbackQuery, Update}
+import cats.syntax.either.*
+import io.circe.parser.decode
 import org.telegram.telegrambots.meta.api.objects.message.Message
+import org.telegram.telegrambots.meta.api.objects.{CallbackQuery, Update}
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{LogAnnotation, Runtime, Task, ZIO}
 
@@ -26,7 +30,7 @@ class OzonPriceCheckerUpdateConsumer(
 
   private implicit val _telegramClient: TelegramClient = telegramClient
 
-  //noinspection SimplifyWhenInspection
+  // noinspection SimplifyWhenInspection
   override def consumeZio(update: Update): Task[Unit] =
     if update.hasMessage then processMessage(update.getMessage)
     else if update.hasCallbackQuery then processCallbackQuery(update.getCallbackQuery)
@@ -124,7 +128,30 @@ class OzonPriceCheckerUpdateConsumer(
     }
 
   private def processCallbackQuery(callbackQuery: CallbackQuery): Task[Unit] =
-    ZIO.log(s"Callback data: ${callbackQuery.getData}")
+    val data     = callbackQuery.getData
+    val userName = callbackQuery.getFrom.getUserName
+    val chatId   = callbackQuery.getMessage.getChatId.toString
+
+    val sourceId = SourceId(userName, chatId)
+
+    ZIO
+      .logAnnotate(LogAnnotation("userName", userName), LogAnnotation("chatId", chatId)) {
+        ZIO.log(s"Callback data: $data") *>
+          ZIO
+            .fromEither(
+              decode[CallbackData](data).leftMap(error => Throwables.failure(s"Failed to decode callback data: $error"))
+            )
+            .flatMap { case DeleteProduct(productIndex) =>
+              ZIO.log(s"Removing product with index = $productIndex") *>
+                productStore.removeProduct(sourceId, productIndex) <*
+                sendTextMessage(
+                  chatId,
+                  s"The product at index $productIndex has been removed. \n\n" +
+                    s"Check the actual list of watched products with ${OzonPriceCheckerBotCommands.ShowAllProducts}"
+                )
+            }
+            .unit
+      }
 
   private def onPriceThreshold(sourceId: SourceId, productId: ProductId, priceThreshold: Int) =
     sendTextMessage(
