@@ -24,6 +24,9 @@ out/
 ### Local Config Files ###
 *.local.conf
 
+### Local Store Files ###
+*.local.store
+
 ### Logback ###
 logback.xml
 

@@ -43,6 +43,9 @@ class InMemoryProductStore(productStateRef: Ref[ProductState]) extends ProductSt
   override def removeProduct(sourceId: SourceId, productId: ProductId): Task[Boolean] =
     doUpdate(sourceId, sourceState => sourceState.copy(products = sourceState.products.filter(_.id != productId)))
 
+  override def removeProduct(sourceId: SourceId, productIndex: Int): Task[Boolean] =
+    doUpdate(sourceId, sourceState => sourceState.copy(products = sourceState.products.zipWithIndex.filter(_._2 != productIndex).map(_._1)))
+
   private def doUpdateProductCandidate(
       sourceId: SourceId,
       maybeProductCandidate: Option[ProductCandidate]

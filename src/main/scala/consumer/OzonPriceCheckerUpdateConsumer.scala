@@ -9,7 +9,7 @@ import store.ProductStore.ProductCandidate.*
 import store.ProductStore.{Product, ProductCandidate, SourceId}
 import util.telegram.MessageSendingUtils.sendTextMessage
 
-import org.telegram.telegrambots.meta.api.objects.Update
+import org.telegram.telegrambots.meta.api.objects.{CallbackQuery, Update}
 import org.telegram.telegrambots.meta.api.objects.message.Message
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{LogAnnotation, Runtime, Task, ZIO}
@@ -26,10 +26,11 @@ class OzonPriceCheckerUpdateConsumer(
 
   private implicit val _telegramClient: TelegramClient = telegramClient
 
+  //noinspection SimplifyWhenInspection
   override def consumeZio(update: Update): Task[Unit] =
-    ZIO
-      .when(update.hasMessage)(processMessage(update.getMessage))
-      .unit
+    if update.hasMessage then processMessage(update.getMessage)
+    else if update.hasCallbackQuery then processCallbackQuery(update.getCallbackQuery)
+    else ZIO.unit
 
   private def processMessage(message: Message): Task[Unit] =
     val chatId: ChatId     = message.getChatId.toString
@@ -121,6 +122,9 @@ class OzonPriceCheckerUpdateConsumer(
           }
 
     }
+
+  private def processCallbackQuery(callbackQuery: CallbackQuery): Task[Unit] =
+    ZIO.log(s"Callback data: ${callbackQuery.getData}")
 
   private def onPriceThreshold(sourceId: SourceId, productId: ProductId, priceThreshold: Int) =
     sendTextMessage(

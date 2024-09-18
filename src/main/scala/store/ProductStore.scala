@@ -19,6 +19,7 @@ trait ProductStore:
   def resetProductCandidate(sourceId: SourceId): Task[Boolean]
   def addProduct(sourceId: SourceId, product: ProductStore.Product): Task[Boolean]
   def removeProduct(sourceId: SourceId, productId: ProductId): Task[Boolean]
+  def removeProduct(sourceId: SourceId, productIndex: Int): Task[Boolean]
 
 object ProductStore:
   case class SourceId(userName: UserName, chatId: ChatId) extends NamedToString

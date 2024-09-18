@@ -6,5 +6,6 @@ object OzonPriceCheckerBotCommands:
   val Start              = "/start"
   val Stop               = "/stop"
   val WatchNewProduct    = "/watchnewproduct"
+  val UnwatchProduct     = "/unwatchproduct"
   val UnwatchAllProducts = "/unwatchallproducts"
   val ShowAllProducts    = "/showallproducts"

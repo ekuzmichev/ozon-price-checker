@@ -1,18 +1,24 @@
 package ru.ekuzmichev
 package consumer
 
-import bot.OzonPriceCheckerBotCommands
+import bot.CallbackData.DeleteProduct
+import bot.{CallbackData, OzonPriceCheckerBotCommands}
 import store.ProductStore
 import store.ProductStore.ProductCandidate.WaitingProductId
 import store.ProductStore.SourceId
 import util.telegram.MessageSendingUtils.sendTextMessage
 import util.zio.ZioLoggingImplicits.Ops
 
+import io.circe.syntax.*
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.{InlineKeyboardButton, InlineKeyboardRow}
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{Task, ZIO}
 
 class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient)
     extends CommandProcessor:
+
   private implicit val _telegramClient: TelegramClient = telegramClient
 
   def processCommand(sourceId: SourceId, text: String): Task[Unit] =
@@ -20,6 +26,7 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
     else if text == OzonPriceCheckerBotCommands.Stop then processStopCommand(sourceId)
     else if text == OzonPriceCheckerBotCommands.Cancel then processCancelCommand(sourceId)
     else if text == OzonPriceCheckerBotCommands.WatchNewProduct then processWatchNewProductCommand(sourceId)
+    else if text == OzonPriceCheckerBotCommands.UnwatchProduct then processUnwatchProductCommand(sourceId)
     else if text == OzonPriceCheckerBotCommands.UnwatchAllProducts then processUnwatchAllProductsCommand(sourceId)
     else if text == OzonPriceCheckerBotCommands.ShowAllProducts then processShowAllProductsCommand(sourceId)
     else
@@ -82,6 +89,45 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
       .emptyState(sourceId)
       .zipRight(sendTextMessage(sourceId.chatId, "I have removed all watched products."))
       .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchAllProducts}")
+
+  private def processUnwatchProductCommand(sourceId: SourceId): Task[Unit] =
+    productStore
+      .readSourceState(sourceId)
+      .flatMap {
+        case Some(sourceState) => replyWithInnerDeletionKeyboard(sourceId, sourceState.products)
+        case None              => askToSendStartCommand(sourceId)
+      }
+      .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchProduct}")
+
+  private def replyWithInnerDeletionKeyboard(sourceId: SourceId, products: Seq[ProductStore.Product]): Task[Unit] =
+    val rows: Seq[InlineKeyboardRow] = products.zipWithIndex.map { case (product, index) =>
+      new InlineKeyboardRow(
+        InlineKeyboardButton
+          .builder()
+          .text(s"$index) ${product.id} | ${product.priceThreshold} ₽")
+          .callbackData(DeleteProduct(index).asInstanceOf[CallbackData].asJson.noSpaces)
+          .build()
+      )
+    }
+
+    val inlineKeyboardMarkup: InlineKeyboardMarkup =
+      rows
+        .foldLeft(
+          InlineKeyboardMarkup
+            .builder()
+        ) { case (curr, next) => curr.keyboardRow(next) }
+        .build()
+
+    val sendMessage: SendMessage = SendMessage
+      .builder()
+      .chatId(sourceId.chatId)
+      .text("Choose which product you want to unwatch:")
+      .replyMarkup(inlineKeyboardMarkup)
+      .build()
+
+    ZIO.attempt {
+      telegramClient.execute(sendMessage)
+    }.unit
 
   private def processShowAllProductsCommand(sourceId: SourceId): Task[Unit] =
     productStore

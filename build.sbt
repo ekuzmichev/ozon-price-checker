@@ -2,9 +2,6 @@ ThisBuild / version      := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "ru.ekuzmichev"
 ThisBuild / scalaVersion := "3.3.3"
 
-val zioVersion   = "4.0.2"
-val circeVersion = "0.14.1"
-
 ThisBuild / assemblyMergeStrategy := {
   case PathList("app.local.conf")            => MergeStrategy.discard
   case PathList("logback.xml")               => MergeStrategy.discard
@@ -43,10 +40,10 @@ lazy val root = (project in file("."))
         "dev.zio" %% "zio-config",
         "dev.zio" %% "zio-config-magnolia",
         "dev.zio" %% "zio-config-typesafe"
-      ).map(_ % zioVersion) ++
+      ).map(_ % "4.0.2") ++
       Seq(
         "io.circe" %% "circe-core",
         "io.circe" %% "circe-generic",
         "io.circe" %% "circe-parser"
-      ).map(_ % circeVersion)
+      ).map(_ % "0.14.1")
   )

@@ -72,13 +72,26 @@ object InMemoryProductStoreTest extends ZIOSpecDefault:
           hasWhiteLampProduct <- productStore.checkHasProductId(bobSourceId, whiteLampProductId)
         yield assertTrue(hasRedKettleProduct, !hasWhiteLampProduct)
       },
-      test("removeProduct should remove product from product list of sourceId if sourceId exists") {
+      test("removeProduct by productId should remove product from product list of sourceId if sourceId exists") {
         import Fixtures.{bobSourceId, pamelaSourceId, redKettleProductId}
         for
           productStore         <- makePreInitializedProductStore()
           bobProductRemoved    <- productStore.removeProduct(bobSourceId, redKettleProductId)
           readBobSourceState   <- productStore.readSourceState(bobSourceId)
           pamelaProductRemoved <- productStore.removeProduct(pamelaSourceId, redKettleProductId)
+        yield assertTrue(
+          bobProductRemoved,
+          !readBobSourceState.get.products.exists(_.id == redKettleProductId),
+          !pamelaProductRemoved
+        )
+      },
+      test("removeProduct by productIndex should remove product from product list of sourceId if sourceId exists") {
+        import Fixtures.{bobSourceId, pamelaSourceId, redKettleProductId}
+        for
+          productStore         <- makePreInitializedProductStore()
+          bobProductRemoved    <- productStore.removeProduct(bobSourceId, 0)
+          readBobSourceState   <- productStore.readSourceState(bobSourceId)
+          pamelaProductRemoved <- productStore.removeProduct(pamelaSourceId, 0)
         yield assertTrue(
           bobProductRemoved,
           !readBobSourceState.get.products.exists(_.id == redKettleProductId),
