@@ -30,3 +30,6 @@ logback.xml
 ### Logs ###
 *.log
 *.log.gz
+
+### Git Guardian ###
+.cache_ggshield
