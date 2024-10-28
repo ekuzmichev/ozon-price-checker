@@ -13,7 +13,9 @@ class DecryptingAppConfigProvider(decoratee: AppConfigProvider, encDec: EncDec) 
         for
           decryptedBotToken <- decrypt(appConfig.botToken)
           decryptedAdmins   <- decrypt(appConfig.admins)
-        yield appConfig.copy(botToken = decryptedBotToken)
+        yield appConfig
+          .copy(botToken = decryptedBotToken)
+          .copy(admins = decryptedAdmins)
       }
 
   private def decrypt(sensitive: Sensitive[String]): Task[Sensitive[String]] =

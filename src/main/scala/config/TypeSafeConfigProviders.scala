@@ -3,7 +3,6 @@ package config
 
 import com.typesafe.config.ConfigFactory
 import zio.config.*
-import zio.config.magnolia.*
 import zio.config.typesafe.*
 import zio.{ConfigProvider, Task}
 
