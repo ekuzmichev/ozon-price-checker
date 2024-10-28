@@ -2,10 +2,10 @@ package ru.ekuzmichev
 package consumer
 
 import bot.CallbackData.DeleteProduct
-import bot.{CallbackData, OzonPriceCheckerBotCommands}
+import bot.{BotAdminCommands, BotGeneralCommands, CallbackData}
 import store.ProductStore
 import store.ProductStore.ProductCandidate.WaitingProductId
-import store.ProductStore.SourceId
+import store.ProductStore.{SourceId, SourceState}
 import util.telegram.MessageSendingUtils.sendTextMessage
 import util.zio.ZioLoggingImplicits.Ops
 
@@ -16,19 +16,20 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.{InlineK
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{Task, ZIO}
 
-class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient)
+class BotCommandProcessor(productStore: ProductStore, telegramClient: TelegramClient, admins: Seq[String])
     extends CommandProcessor:
 
   private implicit val _telegramClient: TelegramClient = telegramClient
 
   def processCommand(sourceId: SourceId, text: String): Task[Unit] =
-    if text == OzonPriceCheckerBotCommands.Start then processStartCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.Stop then processStopCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.Cancel then processCancelCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.WatchNewProduct then processWatchNewProductCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.UnwatchProduct then processUnwatchProductCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.UnwatchAllProducts then processUnwatchAllProductsCommand(sourceId)
-    else if text == OzonPriceCheckerBotCommands.ShowAllProducts then processShowAllProductsCommand(sourceId)
+    if text == BotGeneralCommands.Start then processStartCommand(sourceId)
+    else if text == BotGeneralCommands.Stop then processStopCommand(sourceId)
+    else if text == BotGeneralCommands.Cancel then processCancelCommand(sourceId)
+    else if text == BotGeneralCommands.WatchNewProduct then processWatchNewProductCommand(sourceId)
+    else if text == BotGeneralCommands.UnwatchProduct then processUnwatchProductCommand(sourceId)
+    else if text == BotGeneralCommands.UnwatchAllProducts then processUnwatchAllProductsCommand(sourceId)
+    else if text == BotGeneralCommands.ShowAllProducts then processShowAllProductsCommand(sourceId)
+    else if text == BotAdminCommands.Stats && admins.contains(sourceId.userName) then processStatsCommand(sourceId)
     else
       ZIO.log(s"Got unknown command $text") *>
         sendTextMessage(sourceId.chatId, s"I can not process command $text. Please send me a command known to me.")
@@ -41,7 +42,7 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
           else "You have been already added to the Store before."
         sendTextMessage(sourceId.chatId, msg)
       )
-      .logged(s"process command ${OzonPriceCheckerBotCommands.Start} ")
+      .logged(s"process command ${BotGeneralCommands.Start} ")
 
   private def initializeStoreEntry(sourceId: SourceId): Task[Boolean] =
     for
@@ -63,14 +64,14 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
         else "You have been already removed from the Store before."
       _ <- sendTextMessage(sourceId.chatId, msg)
     yield ())
-      .logged(s"process command ${OzonPriceCheckerBotCommands.Stop} ")
+      .logged(s"process command ${BotGeneralCommands.Stop} ")
 
   private def processCancelCommand(sourceId: SourceId): Task[Unit] =
     productStore.resetProductCandidate(sourceId) *>
       sendTextMessage(
         sourceId.chatId,
         "Current product addition has been cancelled.\n\n" +
-          s"Send me ${OzonPriceCheckerBotCommands.WatchNewProduct} to start over"
+          s"Send me ${BotGeneralCommands.WatchNewProduct} to start over"
       )
 
   private def processWatchNewProductCommand(sourceId: SourceId): Task[Unit] =
@@ -82,13 +83,13 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
             productStore.updateProductCandidate(sourceId, WaitingProductId)
         else askToSendStartCommand(sourceId)
     yield ())
-      .logged(s"process command ${OzonPriceCheckerBotCommands.WatchNewProduct}")
+      .logged(s"process command ${BotGeneralCommands.WatchNewProduct}")
 
   private def processUnwatchAllProductsCommand(sourceId: SourceId): Task[Unit] =
     productStore
       .emptyState(sourceId)
       .zipRight(sendTextMessage(sourceId.chatId, "I have removed all watched products."))
-      .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchAllProducts}")
+      .logged(s"process command ${BotGeneralCommands.UnwatchAllProducts}")
 
   private def processUnwatchProductCommand(sourceId: SourceId): Task[Unit] =
     productStore
@@ -97,7 +98,7 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
         case Some(sourceState) => replyWithInnerDeletionKeyboard(sourceId, sourceState.products)
         case None              => askToSendStartCommand(sourceId)
       }
-      .logged(s"process command ${OzonPriceCheckerBotCommands.UnwatchProduct}")
+      .logged(s"process command ${BotGeneralCommands.UnwatchProduct}")
 
   private def replyWithInnerDeletionKeyboard(sourceId: SourceId, products: Seq[ProductStore.Product]): Task[Unit] =
     val rows: Seq[InlineKeyboardRow] = products.zipWithIndex.map { case (product, index) =>
@@ -139,7 +140,7 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
               sendTextMessage(
                 sourceId.chatId,
                 s"You have no watched products.\n\n" +
-                  s"To watch new product send me ${OzonPriceCheckerBotCommands.WatchNewProduct}"
+                  s"To watch new product send me ${BotGeneralCommands.WatchNewProduct}"
               )
             case products =>
               sendTextMessage(
@@ -155,11 +156,27 @@ class OzonPriceCheckerCommandProcessor(productStore: ProductStore, telegramClien
         case None =>
           askToSendStartCommand(sourceId)
       }
-      .logged(s"process command ${OzonPriceCheckerBotCommands.ShowAllProducts}")
+      .logged(s"process command ${BotGeneralCommands.ShowAllProducts}")
       .unit
 
   private def askToSendStartCommand(sourceId: SourceId) =
     sendTextMessage(
       sourceId.chatId,
-      s"You have not been yet initialized. Send me ${OzonPriceCheckerBotCommands.Start} command to fix it."
+      s"You have not been yet initialized. Send me ${BotGeneralCommands.Start} command to fix it."
     )
+
+  private def processStatsCommand(sourceId: SourceId): Task[Unit] =
+    productStore
+      .readAll()
+      .tap { (sourceStateBySourceId: Map[SourceId, SourceState]) =>
+        sendTextMessage(
+          sourceId.chatId,
+          s"Here are bot user statistics:\n\n" +
+            s"${sourceStateBySourceId.zipWithIndex
+                .map { case ((sourceId, sourceState), index) =>
+                  s"${index + 1}) ${sourceId.userName} - ${sourceState.products.size} products"
+                }
+                .mkString("\n")}"
+        )
+      }
+      .unit

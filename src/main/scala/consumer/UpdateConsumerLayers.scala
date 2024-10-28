@@ -2,7 +2,6 @@ package ru.ekuzmichev
 package consumer
 
 import product.{ProductFetcher, ProductIdParser}
-import schedule.ZioScheduler
 import store.ProductStore
 
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
@@ -23,7 +22,7 @@ object UpdateConsumerLayers:
         productIdParser             <- ZIO.service[ProductIdParser]
         commandProcessor            <- ZIO.service[CommandProcessor]
         runtime                     <- ZIO.runtime[Any]
-      yield new OzonPriceCheckerUpdateConsumer(
+      yield new BotUpdateConsumer(
         telegramClient,
         productStore,
         productFetcher,

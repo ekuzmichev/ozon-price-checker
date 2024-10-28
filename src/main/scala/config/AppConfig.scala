@@ -10,5 +10,6 @@ case class AppConfig(
     botToken: Sensitive[String],
     priceCheckingCron: String,
     logBotStatusInterval: Duration,
-    cacheStateFilePath: String
+    cacheStateFilePath: String,
+    admins: Seq[Sensitive[String]]
 ) extends NamedToString

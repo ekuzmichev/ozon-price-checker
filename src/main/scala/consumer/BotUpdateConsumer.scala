@@ -2,7 +2,7 @@ package ru.ekuzmichev
 package consumer
 
 import bot.CallbackData.DeleteProduct
-import bot.{CallbackData, OzonPriceCheckerBotCommands}
+import bot.{BotGeneralCommands, CallbackData}
 import common.{ChatId, ProductId, UserName}
 import product.{ProductFetcher, ProductIdParser}
 import store.*
@@ -18,7 +18,7 @@ import org.telegram.telegrambots.meta.api.objects.{CallbackQuery, Update}
 import org.telegram.telegrambots.meta.generics.TelegramClient
 import zio.{LogAnnotation, Runtime, Task, ZIO}
 
-class OzonPriceCheckerUpdateConsumer(
+class BotUpdateConsumer(
     telegramClient: TelegramClient,
     productStore: ProductStore,
     productFetcher: ProductFetcher,
@@ -83,7 +83,7 @@ class OzonPriceCheckerUpdateConsumer(
                         sendTextMessage(
                           sourceId.chatId,
                           s"Product '$productId' price $productPrice ₽ is already <= price threshold $priceThreshold ₽.\n\n" +
-                            s"Send new price threshold < $productPrice ₽ or ${OzonPriceCheckerBotCommands.Cancel}"
+                            s"Send new price threshold < $productPrice ₽ or ${BotGeneralCommands.Cancel}"
                         )
                     case None =>
                       sendTextMessage(sourceId.chatId, "Send me valid price as a number")
@@ -100,7 +100,7 @@ class OzonPriceCheckerUpdateConsumer(
           sendTextMessage(
             sourceId.chatId,
             s"You have already added product with ID $productId.\n\n" +
-              s"Send me another product ID or command ${OzonPriceCheckerBotCommands.Cancel}"
+              s"Send me another product ID or command ${BotGeneralCommands.Cancel}"
           )
       case false =>
         productFetcher
@@ -121,7 +121,7 @@ class OzonPriceCheckerUpdateConsumer(
               sendTextMessage(
                 sourceId.chatId,
                 s"I can not retrieve information about product with ID $productId.\n\n" +
-                  s"Send me another product ID or command ${OzonPriceCheckerBotCommands.Cancel}"
+                  s"Send me another product ID or command ${BotGeneralCommands.Cancel}"
               )
           }
 
@@ -147,7 +147,7 @@ class OzonPriceCheckerUpdateConsumer(
                 sendTextMessage(
                   chatId,
                   s"The product at index $productIndex has been removed. \n\n" +
-                    s"Check the actual list of watched products with ${OzonPriceCheckerBotCommands.ShowAllProducts}"
+                    s"Check the actual list of watched products with ${BotGeneralCommands.ShowAllProducts}"
                 )
             }
             .unit
@@ -160,9 +160,9 @@ class OzonPriceCheckerUpdateConsumer(
         s"ID: $productId\n\n" +
         s"Price Threshold: $priceThreshold ₽\n\n" +
         s"Added product to watches.\n\n" +
-        s"To watch new product send me ${OzonPriceCheckerBotCommands.WatchNewProduct}"
+        s"To watch new product send me ${BotGeneralCommands.WatchNewProduct}"
     ) *>
       productStore.resetProductCandidate(sourceId) *>
       productStore.addProduct(sourceId, Product(productId, priceThreshold))
 
-end OzonPriceCheckerUpdateConsumer
+end BotUpdateConsumer

@@ -1,7 +1,7 @@
 package ru.ekuzmichev
 package bot
 
-object OzonPriceCheckerBotCommands:
+object BotGeneralCommands:
   val Cancel             = "/cancel"
   val Start              = "/start"
   val Stop               = "/stop"
