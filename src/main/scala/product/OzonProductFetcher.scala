@@ -3,6 +3,8 @@ package product
 
 import common.ProductId
 import product.OzonProductFetcher.*
+import util.lang.Strings.abbreviate
+import util.lang.Throwables.makeCauseSeqMessage
 
 import net.ruippeixotog.scalascraper.browser.Browser
 import net.ruippeixotog.scalascraper.dsl.DSL.*
@@ -25,7 +27,12 @@ class OzonProductFetcher(browser: Browser) extends ProductFetcher:
 
         Some(ProductInfo(name, price))
       }
-      .catchAll(t => ZIO.log(s"Unable to extract product info for product with ID: $productId") *> ZIO.none)
+      .catchAll(t =>
+        ZIO.logError(
+          s"Unable to extract product info for product with ID: $productId. " +
+            s"Cause: ${abbreviate(makeCauseSeqMessage(t))}"
+        ) *> ZIO.none
+      )
 
   private def extractProductName(responseHtml: BrowserDocument): String =
     (responseHtml >> ProductNameAsStringExtractor).trim()
